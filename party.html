@@ -1113,6 +1113,7 @@ footer.app-footer {
       <button class="key-btn util" data-action="back">⌫</button>
     </div>
 
+    <div style="margin-top:8px;margin-bottom:12px;"><button type="button" class="admin-reset-link" id="open-admin-pin-modal" style="background:none;border:none;color:var(--muted);font-size:0.78rem;text-decoration:underline;cursor:pointer;padding:4px;" title="Reset PIN with admin credentials">⚙️ Admin: Update PIN</button></div>
     <div class="pin-dev-signature">
       Developed by <strong>Vishal Dangudubiyyapu</strong><br>
       <span class="te">విశాల్ దంగుడుబియ్యపు</span>
@@ -1121,6 +1122,48 @@ footer.app-footer {
 </div>
 
 <!-- Cloud Sync Setup Modal -->
+<!-- Admin PIN Update Modal -->
+<div id="admin-pin-modal" class="modal-overlay" style="display:none;z-index:100000;">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;font-size:1.15rem;">🔐 Admin: Update Security PIN</h3>
+      <button id="close-admin-pin-x" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);padding:0 4px;line-height:1;" title="Close">✕</button>
+    </div>
+
+    <div id="admin-pin-msg" style="display:none;font-size:0.82rem;padding:8px 12px;border-radius:8px;font-weight:600;"></div>
+
+    <div class="modal-field">
+      <label for="admin-username-input">Admin Username</label>
+      <input type="text" id="admin-username-input" value="vshaldb" readonly disabled style="background:#f1f5f9;color:#475569;cursor:not-allowed;font-weight:700;">
+    </div>
+
+    <div class="modal-field">
+      <label for="admin-password-input">Admin Password</label>
+      <input type="password" id="admin-password-input" placeholder="Enter admin password" autocomplete="current-password">
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="modal-field">
+        <label for="new-pin-input">New 4-Digit PIN</label>
+        <input type="password" id="new-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:4px;font-weight:700;font-size:1.1rem;">
+      </div>
+      <div class="modal-field">
+        <label for="confirm-pin-input">Confirm PIN</label>
+        <input type="password" id="confirm-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:4px;font-weight:700;font-size:1.1rem;">
+      </div>
+    </div>
+
+    <div style="font-size:0.75rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;padding:8px 10px;border-radius:6px;line-height:1.4;">
+      ⚠️ <b>Important:</b> Resetting the PIN will immediately log out all users across all devices and require entering the new PIN.
+    </div>
+
+    <div class="modal-btns" style="justify-content:flex-end;gap:8px;">
+      <button class="btn-secondary" id="close-admin-pin-btn">Cancel</button>
+      <button class="btn-primary" id="save-new-pin-btn">Update PIN &amp; Revoke Sessions</button>
+    </div>
+  </div>
+</div>
+
 <div id="sync-modal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
     <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1238,6 +1281,7 @@ footer.app-footer {
       </select>
 
       <!-- Cloud Sync & Backup Buttons -->
+      <button class="ctrl-btn" id="header-admin-pin-btn" title="Admin: Update PIN">⚙️ Change PIN</button>
       <button class="ctrl-btn" id="lock-portal-btn" title="Lock Portal with PIN">🔒 Lock</button>
       <button class="ctrl-btn" id="open-sync-btn" title="Configure Cloud Sync">☁️ Cloud Sync</button>
       <button class="ctrl-btn" id="export-btn" title="Backup or Export Survey Data">📥 Export</button>
@@ -1311,32 +1355,17 @@ footer.app-footer {
 // ========================================================
 // 1. PURE JS SHA-256 HASH & 6-HOUR SESSION AUTHENTICATION
 // ========================================================
-const AUTH_HASH = "3ca7484c045ed4e8ff7fef5b9ce6b63781ee1cba4742779a42968d576d8f9eb8";
+const DEFAULT_AUTH_HASH = "3ca7484c045ed4e8ff7fef5b9ce6b63781ee1cba4742779a42968d576d8f9eb8";
 const AUTH_SALT = "pkm_survey_2026_";
 const AUTH_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
 const AUTH_SESSION_KEY = "pkm_survey_auth_session";
+const AUTH_EPOCH_KEY = "pkm_survey_auth_epoch";
 
-function isAuthSessionValid() {
-  try {
-    const t = localStorage.getItem(AUTH_SESSION_KEY);
-    if (t && (Date.now() - Number(t)) < AUTH_DURATION_MS) {
-      return true;
-    }
-  } catch (e) {}
-  return false;
-}
-
-function saveAuthSession() {
-  try {
-    localStorage.setItem(AUTH_SESSION_KEY, String(Date.now()));
-  } catch (e) {}
-}
-
-function clearAuthSession() {
-  try {
-    localStorage.removeItem(AUTH_SESSION_KEY);
-  } catch (e) {}
-}
+// Admin Credentials (Username: vshaldb)
+const ADMIN_USERNAME = "vshaldb";
+const ADMIN_RAW_PASSWORD = ""; // Leave blank to use hash, or enter new password directly in code
+const ADMIN_PASSWORD_HASH = "9e6c1ebfc83a687ba7d832795164aea62c06d8b94ce5e5b0948edc9c5872fb01";
+const ADMIN_SALT = "pkm_admin_salt_2026_";
 
 function calcSha256(ascii) {
   function rightRotate(value, amount) {
@@ -1408,6 +1437,51 @@ function calcSha256(ascii) {
   return result;
 }
 
+function verifyAdminPassword(pwd) {
+  if (ADMIN_RAW_PASSWORD && pwd === ADMIN_RAW_PASSWORD) return true;
+  return calcSha256(ADMIN_SALT + pwd) === ADMIN_PASSWORD_HASH;
+}
+
+function getActivePinHash() {
+  return localStorage.getItem("pkm_party_pin_hash") || DEFAULT_AUTH_HASH;
+}
+
+function getPinEpoch() {
+  return Number(localStorage.getItem("pkm_pin_epoch") || "0");
+}
+
+function isAuthSessionValid() {
+  try {
+    const sessionTime = Number(localStorage.getItem(AUTH_SESSION_KEY) || "0");
+    const sessionEpoch = Number(localStorage.getItem(AUTH_EPOCH_KEY) || "0");
+    const currentEpoch = getPinEpoch();
+    
+    // Revoke access immediately if PIN was updated after this session was granted
+    if (sessionEpoch < currentEpoch) {
+      clearAuthSession();
+      return false;
+    }
+    if (sessionTime && (Date.now() - sessionTime) < AUTH_DURATION_MS) {
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function saveAuthSession() {
+  try {
+    localStorage.setItem(AUTH_SESSION_KEY, String(Date.now()));
+    localStorage.setItem(AUTH_EPOCH_KEY, String(getPinEpoch()));
+  } catch (e) {}
+}
+
+function clearAuthSession() {
+  try {
+    localStorage.removeItem(AUTH_SESSION_KEY);
+    localStorage.removeItem(AUTH_EPOCH_KEY);
+  } catch (e) {}
+}
+
 let enteredPin = "";
 const pinOverlay = document.getElementById("pin-overlay");
 const pinBox = document.getElementById("pin-box");
@@ -1420,7 +1494,7 @@ const cells = [
   document.getElementById("dot-3")
 ];
 
-// Check existing 6-hour auth session
+// Check 6-hour auth session
 if (isAuthSessionValid()) {
   if (pinOverlay) {
     pinOverlay.style.display = "none";
@@ -1468,9 +1542,10 @@ function handleClear() {
 
 function verifySecretCode() {
   const hashHex = calcSha256(AUTH_SALT + enteredPin);
+  const expectedHash = getActivePinHash();
   
-  if (hashHex === AUTH_HASH) {
-    saveAuthSession(); // Remember login for 6 hours!
+  if (hashHex === expectedHash) {
+    saveAuthSession(); // Save session for 6 hours
     pinStatus.textContent = "✓ Authorized! Loading portal...";
     pinStatus.className = "pin-info";
     pinStatus.style.color = "var(--sure-color)";
@@ -1507,14 +1582,15 @@ function verifySecretCode() {
 window.addEventListener("keydown", (e) => {
   if (pinOverlay && pinOverlay.style.display === "none") return;
   const syncM = document.getElementById("sync-modal");
-  if (syncM && syncM.style.display === "flex") return;
+  const adminM = document.getElementById("admin-pin-modal");
+  if ((syncM && syncM.style.display === "flex") || (adminM && adminM.style.display === "flex")) return;
   
   if (e.key >= "0" && e.key <= "9") handleDigit(e.key);
   else if (e.key === "Backspace") handleBack();
   else if (e.key === "Escape") handleClear();
 });
 
-// Keypad buttons for touch and click
+// Keypad buttons
 document.querySelectorAll(".keypad button").forEach(btn => {
   btn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -1538,13 +1614,12 @@ if (hiddenInput) {
   });
 }
 
-// Auto focus hidden input on overlay click
 const pinDisplayWrap = document.getElementById("pin-display-wrap");
 if (pinDisplayWrap && hiddenInput) {
   pinDisplayWrap.addEventListener("click", () => hiddenInput.focus());
 }
 
-// Manual lock portal button
+// Lock portal button
 const lockBtn = document.getElementById("lock-portal-btn");
 if (lockBtn) {
   lockBtn.addEventListener("click", () => {
@@ -1556,7 +1631,122 @@ if (lockBtn) {
 }
 
 // ========================================================
-// 2. LIVE CLOUD REALTIME DATABASE SYNC ENGINE
+// 2. ADMIN PIN RESET CONTROLS & SESSION REVOCATION
+// ========================================================
+const adminPinModal = document.getElementById("admin-pin-modal");
+const openAdminPinModal = document.getElementById("open-admin-pin-modal");
+const headerAdminPinBtn = document.getElementById("header-admin-pin-btn");
+const closeAdminPinBtn = document.getElementById("close-admin-pin-btn");
+const closeAdminPinX = document.getElementById("close-admin-pin-x");
+const saveNewPinBtn = document.getElementById("save-new-pin-btn");
+const adminPwdInput = document.getElementById("admin-password-input");
+const newPinInput = document.getElementById("new-pin-input");
+const confirmPinInput = document.getElementById("confirm-pin-input");
+const adminPinMsg = document.getElementById("admin-pin-msg");
+
+function showAdminPinModal() {
+  adminPwdInput.value = "";
+  newPinInput.value = "";
+  confirmPinInput.value = "";
+  adminPinMsg.style.display = "none";
+  adminPinModal.style.display = "flex";
+  adminPwdInput.focus();
+}
+
+function hideAdminPinModal() {
+  adminPinModal.style.display = "none";
+}
+
+if (openAdminPinModal) openAdminPinModal.addEventListener("click", showAdminPinModal);
+if (headerAdminPinBtn) headerAdminPinBtn.addEventListener("click", showAdminPinModal);
+if (closeAdminPinBtn) closeAdminPinBtn.addEventListener("click", hideAdminPinModal);
+if (closeAdminPinX) closeAdminPinX.addEventListener("click", hideAdminPinModal);
+if (adminPinModal) {
+  adminPinModal.addEventListener("click", (e) => {
+    if (e.target === adminPinModal) hideAdminPinModal();
+  });
+}
+
+function showAdminMsg(type, text) {
+  adminPinMsg.style.display = "block";
+  if (type === "error") {
+    adminPinMsg.style.background = "#fee2e2";
+    adminPinMsg.style.color = "#dc2626";
+    adminPinMsg.style.border = "1px solid #fecaca";
+  } else {
+    adminPinMsg.style.background = "#ecfdf5";
+    adminPinMsg.style.color = "#065f46";
+    adminPinMsg.style.border = "1px solid #a7f3d0";
+  }
+  adminPinMsg.innerHTML = text;
+}
+
+if (saveNewPinBtn) {
+  saveNewPinBtn.addEventListener("click", () => {
+    const pwd = adminPwdInput.value;
+    const p1 = newPinInput.value.trim();
+    const p2 = confirmPinInput.value.trim();
+
+    if (!pwd) {
+      showAdminMsg("error", "Please enter the admin password.");
+      adminPwdInput.focus();
+      return;
+    }
+
+    if (!verifyAdminPassword(pwd)) {
+      showAdminMsg("error", "✕ Incorrect admin password. Access denied.");
+      adminPwdInput.value = "";
+      adminPwdInput.focus();
+      return;
+    }
+
+    if (!/^[0-9]{4}$/.test(p1)) {
+      showAdminMsg("error", "New PIN must be exactly 4 digits (0-9).");
+      newPinInput.focus();
+      return;
+    }
+
+    if (p1 !== p2) {
+      showAdminMsg("error", "New PIN and Confirm PIN do not match.");
+      confirmPinInput.focus();
+      return;
+    }
+
+    // Update PIN & generate new epoch
+    const newHash = calcSha256(AUTH_SALT + p1);
+    const newEpoch = Date.now();
+
+    localStorage.setItem("pkm_party_pin_hash", newHash);
+    localStorage.setItem("pkm_pin_epoch", String(newEpoch));
+    clearAuthSession(); // Revoke all active sessions!
+
+    // Broadcast to Firebase so all devices immediately lose access
+    if (firebaseDb) {
+      firebaseDb.ref("config/pin").set({
+        hash: newHash,
+        epoch: newEpoch,
+        updatedAt: new Date().toISOString()
+      }).catch(e => console.warn("Firebase pin sync:", e));
+    }
+
+    showAdminMsg("success", "✓ PIN successfully updated! All active sessions have been revoked. Please enter the new PIN.");
+    setTimeout(() => {
+      hideAdminPinModal();
+      if (pinOverlay) {
+        pinOverlay.style.display = "flex";
+        pinOverlay.style.opacity = "1";
+        enteredPin = "";
+        updateCells();
+        pinStatus.textContent = "✓ PIN updated! Enter new 4-digit PIN.";
+        pinStatus.className = "pin-info";
+        pinStatus.style.color = "var(--sure-color)";
+      }
+    }, 1000);
+  });
+}
+
+// ========================================================
+// 3. LIVE CLOUD REALTIME DATABASE SYNC ENGINE
 // ========================================================
 const HARDCODED_FIREBASE_URL = ""; 
 
@@ -1619,7 +1809,7 @@ function updateSyncUI(status, message, dbUrl) {
       modalStatusBanner.style.background = "#ecfdf5";
       modalStatusBanner.style.color = "#065f46";
       modalStatusBanner.style.border = "1px solid #a7f3d0";
-      modalStatusBanner.innerHTML = "🟢 <b>Live Cloud Sync Active</b> · All voter marks update across all phones in real time.";
+      modalStatusBanner.innerHTML = "🟢 <b>Live Cloud Sync Active</b> · All marks update across all phones in real time.";
       if (shareLinkBox) shareLinkBox.style.display = "block";
       if (disconnectBtn) disconnectBtn.style.display = "inline-block";
     } else if (status === "connecting") {
@@ -1701,6 +1891,27 @@ async function connectCloudSync(dbUrl) {
     }
     firebase.initializeApp({ databaseURL: dbUrl });
     firebaseDb = firebase.database();
+
+    // Listen for remote PIN resets to immediately revoke access on all devices
+    firebaseDb.ref("config/pin").on("value", (snapshot) => {
+      const cfg = snapshot.val();
+      if (cfg && cfg.epoch) {
+        const localEpoch = getPinEpoch();
+        if (cfg.epoch > localEpoch) {
+          localStorage.setItem("pkm_party_pin_hash", cfg.hash);
+          localStorage.setItem("pkm_pin_epoch", String(cfg.epoch));
+          clearAuthSession();
+          if (pinOverlay) {
+            pinOverlay.style.display = "flex";
+            pinOverlay.style.opacity = "1";
+            enteredPin = "";
+            updateCells();
+            pinStatus.textContent = "⚠️ PIN reset by Admin. Enter new PIN.";
+            pinStatus.className = "pin-info error";
+          }
+        }
+      }
+    });
 
     // Test permission by reading marks once
     firebaseDb.ref("marks").once("value").then((snapshot) => {
@@ -1820,7 +2031,6 @@ if (saveSyncBtn) {
     }
     
     localStorage.setItem("pkm_cloud_db_url", url);
-    // Dynamically connect without reloading the page!
     await connectCloudSync(url);
   });
 }
@@ -1851,7 +2061,7 @@ if (copyShareLinkBtn) {
 }
 
 // ========================================================
-// 3. VOTER MARKINGS PERSISTENCE
+// 4. VOTER MARKINGS PERSISTENCE
 // ========================================================
 const MARKS_KEY = "pkm_voter_cadre_marks";
 
@@ -1966,7 +2176,7 @@ if (importBtn && importInput) {
 }
 
 // ========================================================
-// 4. DATA PROCESSING & SEARCH ENGINE
+// 5. DATA PROCESSING & SEARCH ENGINE
 // ========================================================
 const COLS = ["ward","serial","part_ref","name","name_te","rel_type","rel_name","rel_name_te","age","gender","house","epic","page","review"];
 const RAW = JSON.parse(document.getElementById("voters").textContent);
