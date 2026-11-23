@@ -3,10 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Cadre Portal · Pathakunkam Voter Analytics (పాతకుంకం)</title>
+<title>Cadre Portal · Pathakunkam Live Voter Analytics (పాతకుంకం)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+
+<!-- Firebase Realtime Database SDK for Multi-User Live Sync -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
 /* =========================================================
    CADRE / INTERNAL SURVEY SYSTEM STYLING
@@ -348,6 +353,13 @@ header.app-header .wrap {
   gap: 2px;
 }
 
+.badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .cadre-badge {
   display: inline-flex;
   align-items: center;
@@ -361,6 +373,45 @@ header.app-header .wrap {
   padding: 2px 8px;
   border-radius: 999px;
   width: fit-content;
+}
+
+/* Live Cloud Sync Indicator */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sync-indicator.online {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+.sync-indicator.offline {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+}
+
+.sync-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.sync-indicator.online .sync-dot {
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
 }
 
 .app-title-group {
@@ -471,7 +522,7 @@ h1.app-title {
   padding: 0;
 }
 
-/* Control Row with Marker Filter */
+/* Controls Row */
 .controls-bar {
   display: flex;
   gap: 6px;
@@ -503,12 +554,112 @@ select.ctrl-select, .ctrl-btn {
   color: var(--primary);
 }
 
-/* Party Status Filter Select with Custom Styling */
 #marker-filter {
   font-weight: 700;
   border-color: var(--accent);
   background: var(--accent-light);
   color: #0f4c81;
+}
+
+/* Cloud DB Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(4px);
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: var(--shadow-lg);
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+
+.modal-card h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-field {
+  display: grid;
+  gap: 6px;
+}
+
+.modal-field label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.modal-field input {
+  font: inherit;
+  font-size: 0.88rem;
+  padding: 8px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.modal-field input:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.modal-guide {
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: var(--bg);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--line-strong);
+  line-height: 1.5;
+}
+
+.modal-guide ol {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.modal-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-primary {
+  background: #10b981;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 /* Main Content Area */
@@ -540,10 +691,6 @@ main.app-main .wrap {
 
 .metric-card:hover {
   transform: translateY(-1px);
-}
-
-.metric-card.active {
-  box-shadow: 0 0 0 2px var(--primary);
 }
 
 .metric-card.sure-card {
@@ -642,7 +789,7 @@ main.app-main .wrap {
 }
 
 /* =========================================================
-   VOTER CARDS WITH VOTER SURVEY MARKERS
+   VOTER CARDS WITH REAL-TIME VOTER SURVEY MARKERS
    ========================================================= */
 .voter-grid {
   display: grid;
@@ -722,7 +869,7 @@ main.app-main .wrap {
   font-weight: 700;
   border-radius: 6px;
   border: 1px solid transparent;
-  padding: 4px 6px;
+  padding: 5px 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -937,7 +1084,7 @@ footer.app-footer {
     <div class="pin-emblem">🗳️</div>
     <h2 class="pin-heading">Cadre Survey Portal</h2>
     <div class="pin-desc">
-      <span>Pathakunkam Voter Analytics</span>
+      <span>Pathakunkam Live Voter Analytics</span>
       <span class="te">పాతకుంకం గ్రామ పంచాయతీ సర్వే</span>
     </div>
     
@@ -972,11 +1119,68 @@ footer.app-footer {
   </div>
 </div>
 
+<!-- Cloud Sync Setup Modal -->
+<div id="sync-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;">☁️ Live Multi-Device Cloud Sync</h3>
+      <button id="close-sync-x" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);padding:0 4px;line-height:1;" title="Close">✕</button>
+    </div>
+
+    <div id="modal-status-banner" style="font-size:0.82rem;padding:8px 12px;border-radius:8px;font-weight:600;"></div>
+    
+    <div class="modal-field">
+      <label for="firebase-url-input">Firebase Realtime Database URL</label>
+      <input type="url" id="firebase-url-input" placeholder="https://your-project-default-rtdb.firebaseio.com">
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-primary" id="save-sync-url-btn" style="flex:1;">Connect &amp; Sync</button>
+      <button class="btn-secondary" id="disconnect-sync-btn" style="display:none;background:#fee2e2;color:#dc2626;border:1px solid #fecaca;">Disconnect</button>
+    </div>
+
+    <div id="share-link-box" style="display:none;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;text-align:center;">
+      <div style="font-size:0.8rem;color:#166534;margin-bottom:8px;font-weight:600;">
+        Share this direct link with your party cadre on WhatsApp:
+      </div>
+      <button class="btn-primary" id="copy-share-link-btn" style="background:#22c55e;width:100%;font-size:0.84rem;padding:9px;border:none;">
+        📋 Copy WhatsApp Link for Workers
+      </button>
+      <div style="font-size:0.73rem;color:#15803d;margin-top:6px;">
+        Anyone opening this link will have their phone synced automatically!
+      </div>
+    </div>
+
+    <div class="modal-guide">
+      <strong>How to sync across everyone's phone in real time:</strong>
+      <ol style="margin:6px 0 0 16px;padding:0;font-size:0.8rem;line-height:1.5;">
+        <li>Go to <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--primary);font-weight:700;">console.firebase.google.com</a> &amp; create a free project.</li>
+        <li>Under <strong>Build</strong>, click <strong>Realtime Database</strong> ➔ <strong>Create Database</strong>.</li>
+        <li>Choose <em>Start in test mode</em> (rules: <code>{".read": true, ".write": true}</code>).</li>
+        <li>Copy your Database URL (e.g. <code>https://...firebaseio.com</code>) and paste it above!</li>
+      </ol>
+      <div style="margin-top:6px;font-size:0.75rem;color:var(--muted);">
+        ⚡ <em>When any worker marks a voter Sure or Doubt, all phones update in under 100 milliseconds!</em>
+      </div>
+    </div>
+
+    <div class="modal-btns" style="justify-content:flex-end;">
+      <button class="btn-secondary" id="close-sync-modal">Close</button>
+    </div>
+  </div>
+</div>
+
 <header class="app-header">
   <div class="wrap">
     <div class="brand-row">
       <div class="branding">
-        <span class="cadre-badge">🔒 Cadre & Committee Survey Access</span>
+        <div class="badge-row">
+          <span class="cadre-badge">🔒 Cadre Survey Access</span>
+          <span class="sync-indicator offline" id="sync-status" title="Click to configure live Cloud Sync">
+            <span class="sync-dot"></span>
+            <span id="sync-text">Local Storage</span>
+          </span>
+        </div>
         <div class="app-title-group">
           <h1 class="app-title">Pathakunkam Voter Analytics</h1>
           <span class="app-title-te">పాతకుంకం ఓటర్ల సర్వే</span>
@@ -1029,7 +1233,8 @@ footer.app-footer {
         <option value="age">Sort: Age</option>
       </select>
 
-      <!-- Data Export / Import Buttons for Cadre Sync -->
+      <!-- Cloud Sync & Backup Buttons -->
+      <button class="ctrl-btn" id="open-sync-btn" title="Configure Cloud Sync">☁️ Cloud Sync</button>
       <button class="ctrl-btn" id="export-btn" title="Backup or Export Survey Data">📥 Export</button>
       <button class="ctrl-btn" id="import-btn" title="Import / Merge Survey Data">📤 Import</button>
       <input type="file" id="import-file-input" accept=".json" style="display:none;">
@@ -1187,6 +1392,7 @@ async function verifySecretCode() {
 
 window.addEventListener("keydown", (e) => {
   if (pinOverlay.style.display === "none") return;
+  if (document.getElementById("sync-modal").style.display === "flex") return;
   if (e.key >= "0" && e.key <= "9") handleDigit(e.key);
   else if (e.key === "Backspace") handleBack();
   else if (e.key === "Escape") handleClear();
@@ -1203,11 +1409,206 @@ document.querySelectorAll(".keypad button").forEach(btn => {
 });
 
 // ========================================================
-// 2. SURVEY MARKINGS PERSISTENCE & METRICS
+// 2. LIVE CLOUD REALTIME DATABASE SYNC ENGINE
+// ========================================================
+// Default project DB URL (can be customized here or in UI modal)
+const HARDCODED_FIREBASE_URL = ""; 
+
+function getFirebaseUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get("db") || params.get("sync");
+    if (q) {
+      let clean = q.trim();
+      if (clean && !clean.startsWith("http")) clean = "https://" + clean;
+      if (clean.endsWith("/")) clean = clean.slice(0, -1);
+      localStorage.setItem("pkm_cloud_db_url", clean);
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      return clean;
+    }
+    const hash = window.location.hash.slice(1);
+    if (hash && hash.includes("firebaseio.com")) {
+      let clean = hash.trim();
+      if (clean && !clean.startsWith("http")) clean = "https://" + clean;
+      if (clean.endsWith("/")) clean = clean.slice(0, -1);
+      localStorage.setItem("pkm_cloud_db_url", clean);
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      return clean;
+    }
+  } catch (e) {}
+  return localStorage.getItem("pkm_cloud_db_url") || HARDCODED_FIREBASE_URL;
+}
+
+let firebaseDb = null;
+const syncStatusEl = document.getElementById("sync-status");
+const syncTextEl = document.getElementById("sync-text");
+const modalStatusBanner = document.getElementById("modal-status-banner");
+const shareLinkBox = document.getElementById("share-link-box");
+const disconnectBtn = document.getElementById("disconnect-sync-btn");
+
+function updateSyncUI(status, message) {
+  if (syncStatusEl) {
+    syncStatusEl.className = "sync-indicator " + status;
+    syncTextEl.textContent = message;
+  }
+  if (modalStatusBanner) {
+    if (status === "online") {
+      modalStatusBanner.style.background = "#ecfdf5";
+      modalStatusBanner.style.color = "#065f46";
+      modalStatusBanner.style.border = "1px solid #a7f3d0";
+      modalStatusBanner.innerHTML = "🟢 <b>Live Cloud Sync Active</b> · All marks update across all phones automatically.";
+      if (shareLinkBox) shareLinkBox.style.display = "block";
+      if (disconnectBtn) disconnectBtn.style.display = "inline-block";
+    } else if (status === "connecting") {
+      modalStatusBanner.style.background = "#fffbeb";
+      modalStatusBanner.style.color = "#92400e";
+      modalStatusBanner.style.border = "1px solid #fde68a";
+      modalStatusBanner.innerHTML = "🔄 <b>Connecting to Cloud Database...</b>";
+      if (shareLinkBox) shareLinkBox.style.display = "none";
+      if (disconnectBtn) disconnectBtn.style.display = "inline-block";
+    } else {
+      modalStatusBanner.style.background = "#f1f5f9";
+      modalStatusBanner.style.color = "#475569";
+      modalStatusBanner.style.border = "1px solid #cbd5e1";
+      modalStatusBanner.innerHTML = "🟡 <b>Working Offline (Local Storage)</b> · Connect a Firebase Database URL below to sync across all devices in real time.";
+      if (shareLinkBox) shareLinkBox.style.display = "none";
+      if (disconnectBtn) disconnectBtn.style.display = "none";
+    }
+  }
+}
+
+function initCloudSync() {
+  const dbUrl = getFirebaseUrl();
+  if (!dbUrl || !window.firebase) {
+    updateSyncUI("offline", "Local Only (Offline)");
+    return;
+  }
+
+  updateSyncUI("connecting", "Connecting...");
+
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp({ databaseURL: dbUrl });
+    }
+    firebaseDb = firebase.database();
+    updateSyncUI("online", "Live Cloud Sync");
+
+    // Merge any offline local markings to cloud on initial connect
+    firebaseDb.ref("marks").once("value").then((snapshot) => {
+      const cloudData = snapshot.val() || {};
+      const localData = loadLocalMarks();
+      let hasLocalDiff = false;
+      const merged = Object.assign({}, cloudData);
+      for (const k in localData) {
+        if (!cloudData[k] && localData[k]) {
+          merged[k] = localData[k];
+          hasLocalDiff = true;
+        }
+      }
+      if (hasLocalDiff) {
+        firebaseDb.ref("marks").update(merged);
+      }
+    }).catch(err => console.warn("Initial sync check:", err));
+
+    // Listen for live updates across all devices
+    firebaseDb.ref("marks").on("value", (snapshot) => {
+      const cloudData = snapshot.val() || {};
+      MARKS = cloudData;
+      saveLocalMarks(MARKS);
+      updateMetrics();
+      refreshVisibleCards();
+      if (document.getElementById("marker-filter").value !== "all") {
+        render(false);
+      }
+    }, (error) => {
+      console.warn("Cloud sync error:", error);
+      updateSyncUI("offline", "Sync Error");
+    });
+  } catch (err) {
+    console.error("Firebase init failed:", err);
+    updateSyncUI("offline", "Sync Offline");
+  }
+}
+
+// Cloud Sync Modal Handlers
+const syncModal = document.getElementById("sync-modal");
+const openSyncBtn = document.getElementById("open-sync-btn");
+const closeSyncBtn = document.getElementById("close-sync-modal");
+const closeSyncX = document.getElementById("close-sync-x");
+const saveSyncBtn = document.getElementById("save-sync-url-btn");
+const firebaseUrlInput = document.getElementById("firebase-url-input");
+const copyShareLinkBtn = document.getElementById("copy-share-link-btn");
+
+function showSyncModal() {
+  const cur = getFirebaseUrl();
+  firebaseUrlInput.value = cur;
+  updateSyncUI(firebaseDb && cur ? "online" : "offline", firebaseDb && cur ? "Live Cloud Sync" : "Local Only (Offline)");
+  syncModal.style.display = "flex";
+  firebaseUrlInput.focus();
+}
+
+if (openSyncBtn) openSyncBtn.addEventListener("click", showSyncModal);
+if (syncStatusEl) syncStatusEl.addEventListener("click", showSyncModal);
+if (closeSyncBtn) closeSyncBtn.addEventListener("click", () => syncModal.style.display = "none");
+if (closeSyncX) closeSyncX.addEventListener("click", () => syncModal.style.display = "none");
+syncModal.addEventListener("click", (e) => {
+  if (e.target === syncModal) syncModal.style.display = "none";
+});
+
+saveSyncBtn.addEventListener("click", () => {
+  let url = firebaseUrlInput.value.trim();
+  if (url && !url.startsWith("http")) url = "https://" + url;
+  if (url.endsWith("/")) url = url.slice(0, -1);
+  
+  if (!url) {
+    alert("Please enter a valid Firebase Realtime Database URL.");
+    return;
+  }
+  
+  localStorage.setItem("pkm_cloud_db_url", url);
+  syncModal.style.display = "none";
+  alert("🎉 Cloud Database connected!
+
+All voter markings will now synchronize in real-time across all devices.");
+  location.reload();
+});
+
+if (disconnectBtn) {
+  disconnectBtn.addEventListener("click", () => {
+    if (confirm("Disconnect live cloud sync and use offline local storage?")) {
+      localStorage.removeItem("pkm_cloud_db_url");
+      location.reload();
+    }
+  });
+}
+
+if (copyShareLinkBtn) {
+  copyShareLinkBtn.addEventListener("click", () => {
+    const dbUrl = getFirebaseUrl();
+    if (!dbUrl) {
+      alert("Please connect a Firebase Database URL first!");
+      return;
+    }
+    const shareUrl = window.location.origin + window.location.pathname + "?db=" + encodeURIComponent(dbUrl);
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      alert("✅ WhatsApp Link copied to clipboard!
+
+Send this link to your party workers on WhatsApp. When they open it, their phones will automatically connect to this synced database!");
+    }).catch(() => {
+      prompt("Copy this link to share on WhatsApp:", shareUrl);
+    });
+  });
+}
+
+// 3. VOTER MARKINGS PERSISTENCE
 // ========================================================
 const MARKS_KEY = "pkm_voter_cadre_marks";
 
-function loadMarks() {
+function loadLocalMarks() {
   try {
     return JSON.parse(localStorage.getItem(MARKS_KEY) || "{}");
   } catch (e) {
@@ -1215,15 +1616,13 @@ function loadMarks() {
   }
 }
 
-function saveMarks(marks) {
+function saveLocalMarks(marks) {
   try {
     localStorage.setItem(MARKS_KEY, JSON.stringify(marks));
-  } catch (e) {
-    console.error("Save error:", e);
-  }
+  } catch (e) {}
 }
 
-let MARKS = loadMarks();
+let MARKS = loadLocalMarks();
 
 function updateMetrics() {
   let sure = 0, doubt = 0;
@@ -1238,26 +1637,37 @@ function updateMetrics() {
   document.getElementById("metric-empty").textContent = empty.toLocaleString("en-IN");
 }
 
-function setVoterMark(serial, mark) {
-  if (!mark || mark === "empty") {
-    delete MARKS[serial];
-  } else {
-    MARKS[serial] = mark;
-  }
-  saveMarks(MARKS);
-  updateMetrics();
-  
-  // Update card UI immediately
-  const card = document.querySelector(`.voter-card[data-serial="${serial}"]`);
-  if (card) {
+function refreshVisibleCards() {
+  document.querySelectorAll(".voter-card").forEach(card => {
+    const s = card.dataset.serial;
+    const mark = MARKS[s] || "empty";
     card.classList.remove("status-sure", "status-doubt");
     if (mark === "sure") card.classList.add("status-sure");
     else if (mark === "doubt") card.classList.add("status-doubt");
     
     card.querySelectorAll(".mark-btn").forEach(btn => {
-      btn.classList.toggle("active", btn.dataset.mark === (mark || "empty"));
+      btn.classList.toggle("active", btn.dataset.mark === mark);
     });
+  });
+}
+
+function setVoterMark(serial, mark) {
+  if (!mark || mark === "empty") {
+    delete MARKS[serial];
+    if (firebaseDb) {
+      firebaseDb.ref("marks/" + serial).remove();
+    }
+  } else {
+    MARKS[serial] = mark;
+    if (firebaseDb) {
+      firebaseDb.ref("marks/" + serial).set(mark);
+    }
   }
+  
+  saveLocalMarks(MARKS);
+  updateMetrics();
+  refreshVisibleCards();
+  if (document.getElementById('marker-filter').value !== 'all') { render(false); }
 }
 
 // Export / Import
@@ -1280,10 +1690,13 @@ importInput.addEventListener("change", (e) => {
       const imported = JSON.parse(event.target.result);
       if (typeof imported === "object" && imported !== null) {
         MARKS = Object.assign({}, MARKS, imported);
-        saveMarks(MARKS);
+        saveLocalMarks(MARKS);
+        if (firebaseDb) {
+          firebaseDb.ref("marks").update(imported);
+        }
         updateMetrics();
         render(true);
-        alert("Survey data successfully imported and merged!");
+        alert("Survey data successfully imported and synced to the cloud!");
       }
     } catch (err) {
       alert("Invalid JSON survey file.");
@@ -1302,7 +1715,7 @@ document.querySelectorAll(".metric-card").forEach(c => {
 });
 
 // ========================================================
-// 3. VOTER DATA ENGINE & FILTERS
+// 4. VOTER DATA ENGINE & FILTERS
 // ========================================================
 const COLS = ["ward","serial","part_ref","name","name_te","rel_type","rel_name","rel_name_te","age","gender","house","epic","page","review"];
 const RAW = JSON.parse(document.getElementById("voters").textContent);
@@ -1459,7 +1872,6 @@ $("wards").addEventListener("click", e => {
 $("more").addEventListener("click", () => { shown += 120; render(false); });
 
 document.addEventListener("click", e => {
-  // Mark button click
   const mb = e.target.closest(".mark-btn");
   if (mb) {
     const s = mb.dataset.serial;
@@ -1486,6 +1898,7 @@ document.addEventListener("click", e => {
 wardsUI();
 updateMetrics();
 render(true);
+initCloudSync();
 </script>
 </body>
 </html>
