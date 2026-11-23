@@ -1,0 +1,4 @@
+# Git ignore for lightweight GitHub Pages deployment
+*.pdf
+*Voter Finder (Copy).html
+.DS_Store
