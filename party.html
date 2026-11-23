@@ -558,6 +558,136 @@ select.ctrl-select, .ctrl-btn {
   color: var(--primary);
 }
 
+/* Ward Multi-Select Dropdown Filter */
+.ward-dropdown-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.ward-drop-btn {
+  font-family: inherit;
+  font-size: 0.84rem;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.15s ease;
+  height: 34px;
+  box-sizing: border-box;
+}
+
+.ward-drop-btn:hover {
+  background: var(--bg);
+  border-color: var(--line-strong);
+}
+
+.ward-drop-btn:focus-visible, .ward-dropdown-wrap.open .ward-drop-btn {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.ward-drop-btn .drop-arrow {
+  font-size: 0.65rem;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+
+.ward-dropdown-wrap.open .ward-drop-btn .drop-arrow {
+  transform: rotate(180deg);
+}
+
+.ward-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  min-width: 220px;
+  max-width: 90vw;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 8px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: wardMenuIn 0.15s ease-out;
+  box-sizing: border-box;
+}
+
+@keyframes wardMenuIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ward-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 6px;
+  font-size: 0.82rem;
+}
+
+.ward-menu-divider {
+  height: 1px;
+  background: var(--line);
+  margin: 2px 0 4px;
+}
+
+.ward-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 250px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ward-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: var(--fg);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s ease;
+}
+
+.ward-menu-item:hover {
+  background: var(--bg);
+}
+
+.ward-menu-item input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.ward-menu-item .ward-tag-count {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 1px 6px;
+  background: var(--bg);
+  border-radius: 999px;
+  border: 1px solid var(--line);
+}
+
 
 
 /* Cloud DB Modal */
@@ -1259,7 +1389,7 @@ footer.app-footer {
     grid-template-columns: 1fr 1fr;
     gap: 6px;
   }
-  .controls-bar select, .controls-bar button {
+  .controls-bar select, .controls-bar button, .controls-bar .ward-dropdown-wrap, .controls-bar .ward-drop-btn {
     width: 100%;
   }
 }
@@ -1474,7 +1604,24 @@ footer.app-footer {
 
     <!-- Filters Bar Including Party Status Filter -->
     <div class="controls-bar">
-      
+      <!-- Ward Multi-Select Dropdown Filter -->
+      <div class="ward-dropdown-wrap" id="ward-dropdown-wrap">
+        <button type="button" class="ctrl-select ward-drop-btn" id="ward-drop-btn" aria-haspopup="true" aria-expanded="false" title="Filter by wards (multi-select)">
+          <span id="ward-drop-label">🏛️ All Wards (8)</span>
+          <span class="drop-arrow">▾</span>
+        </button>
+        <div class="ward-dropdown-menu" id="ward-dropdown-menu" style="display:none;">
+          <div class="ward-menu-header">
+            <label class="ward-menu-item all-wards-item" style="font-weight:700;margin:0;">
+              <input type="checkbox" id="ward-check-all" checked>
+              <span>All Wards (1–8)</span>
+            </label>
+            <span class="ward-tag-count" id="ward-all-count">1,274</span>
+          </div>
+          <div class="ward-menu-divider"></div>
+          <div class="ward-options-list" id="ward-options-list"></div>
+        </div>
+      </div>
 
       <select id="gender" class="ctrl-select" aria-label="Gender Filter">
         <option value="">All Genders</option>
@@ -1547,8 +1694,6 @@ footer.app-footer {
       </div>
     </div>
 
-    <!-- Ward Segment Selector -->
-    <div class="ward-scroll" id="wards" role="group" aria-label="Filter by ward"></div>
 
     <!-- Results Status -->
     <div class="results-header">
@@ -2582,11 +2727,135 @@ function esc(s) {
 
 const $ = id => document.getElementById(id);
 
-let ward = null, house = null, shown = 60;
+let selectedWards = new Set([1, 2, 3, 4, 5, 6, 7, 8]);
+let house = null, shown = 60;
 
-function wardsUI() {
-  document.querySelectorAll(".ward-btn").forEach(b => {
-    b.classList.toggle("active", (ward === null && b.dataset.w === "all") || (ward !== null && b.dataset.w === String(ward)));
+function openWardDropdown() {
+  const wrap = $("ward-dropdown-wrap");
+  const btn = $("ward-drop-btn");
+  const menu = $("ward-dropdown-menu");
+  if (!wrap || !menu) return;
+  wrap.classList.add("open");
+  menu.style.display = "flex";
+  if (btn) btn.setAttribute("aria-expanded", "true");
+}
+
+function closeWardDropdown() {
+  const wrap = $("ward-dropdown-wrap");
+  const btn = $("ward-drop-btn");
+  const menu = $("ward-dropdown-menu");
+  if (!wrap || !menu) return;
+  wrap.classList.remove("open");
+  menu.style.display = "none";
+  if (btn) btn.setAttribute("aria-expanded", "false");
+}
+
+function updateWardDropdownUI() {
+  const checkAll = $("ward-check-all");
+  const label = $("ward-drop-label");
+  const sorted = Array.from(selectedWards).sort((a, b) => a - b);
+
+  if (checkAll) {
+    if (selectedWards.size === 8) {
+      checkAll.checked = true;
+      checkAll.indeterminate = false;
+    } else if (selectedWards.size === 0) {
+      checkAll.checked = false;
+      checkAll.indeterminate = false;
+    } else {
+      checkAll.checked = false;
+      checkAll.indeterminate = true;
+    }
+  }
+
+  if (label) {
+    if (selectedWards.size === 8) {
+      label.textContent = "🏛️ All Wards (8)";
+    } else if (selectedWards.size === 0) {
+      label.textContent = "🏛️ No Wards (0)";
+    } else if (selectedWards.size <= 2) {
+      label.textContent = `🏛️ Ward ${sorted.join(", ")}`;
+    } else {
+      label.textContent = `🏛️ ${selectedWards.size} Wards (${sorted.join(",")})`;
+    }
+  }
+}
+
+function initWardFilter() {
+  const listEl = $("ward-options-list");
+  if (!listEl) return;
+
+  const counts = {};
+  for (let w = 1; w <= 8; w++) counts[w] = 0;
+  for (let i = 0; i < V.length; i++) {
+    const w = V[i].ward;
+    if (counts[w] !== undefined) counts[w]++;
+  }
+  if ($("ward-all-count")) $("ward-all-count").textContent = V.length.toLocaleString("en-IN");
+
+  listEl.innerHTML = [1, 2, 3, 4, 5, 6, 7, 8].map(w => `
+    <label class="ward-menu-item" data-w="${w}">
+      <input type="checkbox" class="ward-item-check" data-w="${w}" ${selectedWards.has(w) ? "checked" : ""}>
+      <span>Ward ${w}</span>
+      <span class="ward-tag-count">${(counts[w] || 0).toLocaleString("en-IN")}</span>
+    </label>
+  `).join("");
+
+  updateWardDropdownUI();
+
+  const wrap = $("ward-dropdown-wrap");
+  const btn = $("ward-drop-btn");
+
+  if (btn && wrap) {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (wrap.classList.contains("open")) {
+        closeWardDropdown();
+      } else {
+        openWardDropdown();
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!wrap.contains(e.target)) {
+        closeWardDropdown();
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && wrap.classList.contains("open")) {
+        closeWardDropdown();
+      }
+    });
+  }
+
+  const checkAll = $("ward-check-all");
+  if (checkAll) {
+    checkAll.addEventListener("change", () => {
+      if (checkAll.checked) {
+        selectedWards = new Set([1, 2, 3, 4, 5, 6, 7, 8]);
+      } else {
+        selectedWards.clear();
+      }
+      document.querySelectorAll(".ward-item-check").forEach(cb => {
+        cb.checked = selectedWards.has(Number(cb.dataset.w));
+      });
+      updateWardDropdownUI();
+      render(true);
+    });
+  }
+
+  listEl.addEventListener("change", (e) => {
+    const cb = e.target.closest(".ward-item-check");
+    if (!cb) return;
+    const w = Number(cb.dataset.w);
+    if (cb.checked) {
+      selectedWards.add(w);
+    } else {
+      selectedWards.delete(w);
+    }
+    updateWardDropdownUI();
+    render(true);
   });
 }
 
@@ -2605,7 +2874,7 @@ function filter() {
 
   for (let i = 0; i < V.length; i++) {
     const v = V[i];
-    if (ward !== null && v.ward !== Number(ward)) continue;
+    if (selectedWards.size < 8 && !selectedWards.has(v.ward)) continue;
     if (house && (v.ward + "|" + v._h) !== house.key) continue;
     if (g && v.gender !== g) continue;
 
@@ -2713,8 +2982,10 @@ function render(reset) {
   const out = filter();
   const q = $("q").value.trim();
   $("clearq").style.display = q ? "flex" : "none";
+  const sortedWards = Array.from(selectedWards).sort((a, b) => a - b);
+  const wardSuffix = selectedWards.size === 8 ? "" : selectedWards.size === 0 ? " in <b>No Wards</b>" : ` in <b>Ward${sortedWards.length > 1 ? "s " : " "}${sortedWards.join(", ")}</b>`;
   $("count").innerHTML = `<b>${out.length.toLocaleString("en-IN")}</b> voter${out.length === 1 ? "" : "s"}` +
-    (q ? ` matching “<b>${esc(q)}</b>”` : "") + (ward ? ` in <b>Ward ${ward}</b>` : "") +
+    (q ? ` matching “<b>${esc(q)}</b>”` : "") + wardSuffix +
     (!activeStatusFilters.has("all") ? ` · Filtered by: <b>${Array.from(activeStatusFilters).map(f => f === "sure" ? "Sure" : f === "doubt" ? "Doubt" : "Others").join(" + ")}</b>` : "");
   $("housef").innerHTML = house ? `<span class="house-filter-badge">Door No. ${esc(house.label)}</span> · <button class="clear-house-btn" id="clearh">show all doors</button>` : "";
   $("list").innerHTML = out.length ? out.slice(0, shown).map(slip).join("") :
@@ -2727,10 +2998,6 @@ let t;
 $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => render(true), 120); });
 $("clearq").addEventListener("click", () => { $("q").value = ""; $("clearq").style.display = "none"; $("q").focus(); render(true); });
 ["gender", "age", "sort"].forEach(id => $(id).addEventListener("change", () => render(true)));
-$("wards").addEventListener("click", e => {
-  const b = e.target.closest(".ward-btn"); if (!b) return;
-  ward = b.dataset.w; house = null; wardsUI(); render(true);
-});
 $("more").addEventListener("click", () => { shown += 120; render(false); });
 
 document.addEventListener("click", e => {
@@ -2757,7 +3024,7 @@ document.addEventListener("click", e => {
   }
 });
 
-wardsUI();
+initWardFilter();
 updateMetrics();
 render(true);
 initMetricCardFilters();
