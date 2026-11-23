@@ -9,8 +9,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
 <style>
 /* =========================================================
-   ORIGINAL DESIGN SYSTEM: "ANDHRA EMERALD & SAPPHIRE"
-   Distinctive, modern, high-contrast, premium aesthetic
+   ADAPTIVE DESIGN SYSTEM: "ANDHRA SAPPHIRE & TEAL"
+   Engineered for seamless auto-adjustment on mobile & laptop
    ========================================================= */
 :root {
   --primary: #0f4c81;
@@ -50,12 +50,11 @@
 
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08);
 
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-telugu: 'Noto Sans Telugu', 'Plus Jakarta Sans', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,10 +93,6 @@
     --danger-soft: rgba(248, 113, 113, 0.15);
     --success: #34d399;
     --success-soft: rgba(52, 211, 153, 0.15);
-
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
     color-scheme: dark;
   }
 }
@@ -137,14 +132,13 @@
   --danger-soft: rgba(248, 113, 113, 0.15);
   --success: #34d399;
   --success-soft: rgba(52, 211, 153, 0.15);
-
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
   color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
+html {
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
 body {
   margin: 0;
   padding: 0;
@@ -152,13 +146,31 @@ body {
   color: var(--fg);
   font-family: var(--font-sans);
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 1000;
+  background: var(--surface);
+}
+
+.wrap {
+  width: 100%;
+  max-width: 1020px;
+  margin: 0 auto;
+  padding-left: max(14px, env(safe-area-inset-left, 0px));
+  padding-right: max(14px, env(safe-area-inset-right, 0px));
 }
 
 /* =========================================================
-   SECURITY LOCK SCREEN
-   Always displays on reload, requires PIN (no public change UI)
+   SECURITY PIN LOCK OVERLAY
+   Mobile-adaptive with auto scroll & safe touch keypad
    ========================================================= */
 #pin-overlay {
   position: fixed;
@@ -168,26 +180,25 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  background-image: 
-    radial-gradient(circle at 15% 20%, rgba(var(--primary-rgb), 0.08) 0%, transparent 40%),
-    radial-gradient(circle at 85% 80%, rgba(13, 148, 136, 0.08) 0%, transparent 40%);
+  padding: 16px;
+  overflow-y: auto;
+  backdrop-filter: blur(8px);
 }
 
 .pin-container {
   width: 100%;
-  max-width: 380px;
+  max-width: 360px;
   background: var(--surface);
   border: 1px solid var(--line-strong);
-  border-radius: 24px;
-  padding: 36px 28px 28px;
+  border-radius: 20px;
+  padding: 24px 20px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  box-shadow: var(--shadow-xl);
+  box-shadow: var(--shadow-lg);
   position: relative;
-  overflow: hidden;
+  margin: auto;
 }
 
 .pin-container::before {
@@ -207,37 +218,35 @@ body {
 @keyframes lockShake {
   10%, 90% { transform: translate3d(-2px, 0, 0); }
   20%, 80% { transform: translate3d(4px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-  40%, 60% { transform: translate3d(6px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-5px, 0, 0); }
+  40%, 60% { transform: translate3d(5px, 0, 0); }
 }
 
 .pin-emblem {
-  width: 58px;
-  height: 58px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(13, 148, 136, 0.15));
-  border: 1px solid var(--line);
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--primary-light);
   color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  margin-bottom: 16px;
-  box-shadow: var(--shadow-sm);
+  font-size: 24px;
+  margin-bottom: 12px;
 }
 
 .pin-heading {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  margin: 0 0 4px;
   color: var(--fg);
-  margin: 0 0 6px;
 }
 
 .pin-desc {
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   color: var(--muted);
-  margin: 0 0 24px;
+  margin: 0 0 18px;
+  line-height: 1.35;
 }
 
 .pin-desc .te {
@@ -245,51 +254,47 @@ body {
   color: var(--primary);
   font-weight: 600;
   display: block;
-  margin-top: 2px;
 }
 
 .pin-display {
   display: flex;
-  gap: 14px;
-  margin-bottom: 24px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .pin-cell {
-  width: 52px;
-  height: 60px;
-  border-radius: 14px;
+  width: 46px;
+  height: 52px;
+  border-radius: 12px;
   border: 2px solid var(--line-strong);
   background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.8rem;
+  font-size: 1.6rem;
   font-family: var(--font-mono);
   font-weight: 700;
   color: var(--fg);
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.12s ease;
 }
 
 .pin-cell.filled {
   border-color: var(--primary);
   background: var(--primary-light);
   color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
 }
 
 .pin-cell.error {
   border-color: var(--danger);
   background: var(--danger-soft);
   color: var(--danger);
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
 }
 
 .pin-info {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--muted);
-  min-height: 22px;
-  margin-bottom: 18px;
-  transition: color 0.15s ease;
+  min-height: 20px;
+  margin-bottom: 14px;
 }
 
 .pin-info.error {
@@ -300,19 +305,19 @@ body {
 .keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  max-width: 290px;
-  margin-bottom: 22px;
+  max-width: 270px;
+  margin-bottom: 16px;
 }
 
 .key-btn {
-  height: 56px;
-  border-radius: 14px;
+  height: 50px;
+  border-radius: 12px;
   border: 1px solid var(--line);
-  background: var(--surface-raised);
+  background: var(--surface);
   color: var(--fg);
-  font-size: 1.4rem;
+  font-size: 1.3rem;
   font-weight: 600;
   font-family: var(--font-sans);
   cursor: pointer;
@@ -320,35 +325,29 @@ body {
   align-items: center;
   justify-content: center;
   user-select: none;
-  transition: all 0.12s ease;
-  box-shadow: var(--shadow-sm);
+  transition: all 0.1s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
-.key-btn:hover {
+.key-btn:active {
   background: var(--primary-light);
   color: var(--primary);
-  border-color: var(--primary);
-}
-
-.key-btn:active {
-  transform: scale(0.94);
+  transform: scale(0.95);
 }
 
 .key-btn.util {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.9rem;
   color: var(--muted);
   background: var(--bg);
 }
 
 .pin-dev-signature {
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   color: var(--muted);
-  padding-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--line);
   width: 100%;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .pin-dev-signature strong {
@@ -361,57 +360,49 @@ body {
 }
 
 /* =========================================================
-   MAIN APP INTERFACE: FRESH ORIGINAL THEME
+   STICKY HEADER & NAVIGATION - FULLY RESPONSIVE
    ========================================================= */
-.app-wrapper {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-/* Header Banner */
 header.app-header {
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(10px);
+  top: env(safe-area-inset-top, 0px);
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
 
-.header-inner {
-  padding: 16px 0 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+header.app-header .wrap {
+  padding-block: 12px 10px;
+  display: grid;
+  gap: 8px;
 }
 
 .brand-row {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
 }
 
 .branding {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+  min-width: 0;
 }
 
 .gov-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.72rem;
+  gap: 5px;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--accent);
   background: var(--accent-light);
-  padding: 3px 9px;
+  padding: 2px 8px;
   border-radius: 999px;
   width: fit-content;
 }
@@ -419,104 +410,108 @@ header.app-header {
 .app-title-group {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 h1.app-title {
-  font-size: 1.45rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   margin: 0;
   color: var(--fg);
 }
 
 .app-title-te {
   font-family: var(--font-telugu);
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--primary);
 }
 
 .location-meta {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--muted);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* Prominent Developer Badge Requested by User */
 .developer-badge {
-  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.08), rgba(13, 148, 136, 0.1));
-  border: 1px solid rgba(var(--primary-rgb), 0.2);
-  border-radius: 12px;
-  padding: 6px 14px;
+  background: linear-gradient(135deg, rgba(var(--primary-rgb), 0.07), rgba(13, 148, 136, 0.09));
+  border: 1px solid rgba(var(--primary-rgb), 0.18);
+  border-radius: 10px;
+  padding: 5px 12px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   text-align: right;
   gap: 1px;
+  flex-shrink: 0;
 }
 
 .dev-tagline {
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--muted);
 }
 
 .dev-name-en {
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 700;
   color: var(--fg);
 }
 
 .dev-name-te {
   font-family: var(--font-telugu);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--primary);
 }
 
-/* Search Bar with Integrated Clear Button */
+/* Search Bar with Absolute Clear Button */
 .search-container {
   display: flex;
   position: relative;
   align-items: center;
+  width: 100%;
 }
 
 .search-icon {
   position: absolute;
-  left: 14px;
-  font-size: 1.1rem;
+  left: 12px;
+  font-size: 1rem;
   color: var(--muted);
   pointer-events: none;
 }
 
 #q {
   width: 100%;
+  min-width: 0;
   font-family: inherit;
-  font-size: 1.05rem;
-  padding: 12px 42px 12px 44px;
+  font-size: 1rem;
+  padding: 10px 38px 10px 38px;
   border: 1.5px solid var(--line-strong);
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--bg);
   color: var(--fg);
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
+  transition: all 0.15s ease;
 }
 
 #q:focus {
   outline: none;
   border-color: var(--primary);
   background: var(--surface);
-  box-shadow: 0 0 0 4px var(--primary-light);
+  box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .search-clear {
   position: absolute;
-  right: 12px;
-  width: 26px;
-  height: 26px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
   background: var(--line);
   color: var(--fg-secondary);
@@ -525,40 +520,29 @@ h1.app-title {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 700;
   padding: 0;
-}
-
-.search-clear:hover {
-  background: var(--muted);
-  color: #fff;
 }
 
 /* Control Pills & Filters */
 .controls-bar {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
   align-items: center;
+  width: 100%;
 }
 
 select.ctrl-select, .ctrl-toggle {
   font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 500;
-  padding: 7px 12px;
+  font-size: 0.84rem;
+  padding: 5px 9px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--fg);
-  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-
-select.ctrl-select:hover, .ctrl-toggle:hover {
-  border-color: var(--primary);
 }
 
 select.ctrl-select:focus {
@@ -568,129 +552,97 @@ select.ctrl-select:focus {
 
 .ctrl-toggle {
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   user-select: none;
 }
 
 .ctrl-toggle input {
   accent-color: var(--primary);
-  width: 16px;
-  height: 16px;
 }
 
 /* Main Content Area */
-main.app-main {
-  padding: 20px 0 60px;
+main.app-main .wrap {
+  padding-block: 12px 48px;
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
-/* Summary Stats Strip */
+/* Compact Metrics Strip */
 .metrics-strip {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
-}
-
-.metric-pill {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 10px 14px;
-  display: flex;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  color: var(--muted);
   align-items: center;
-  gap: 10px;
-  box-shadow: var(--shadow-sm);
 }
 
-.metric-icon {
-  font-size: 1.3rem;
-  line-height: 1;
+.metrics-strip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
-.metric-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.metric-val {
-  font-size: 1.05rem;
-  font-weight: 800;
+.metrics-strip b {
   color: var(--fg);
 }
 
-.metric-lbl {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-/* Ward Segment Selector */
+/* Ward Chips Row */
 .ward-scroll {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
 .ward-btn {
-  border: 1.5px solid var(--line);
+  border: 1px solid var(--line);
   background: var(--surface);
-  color: var(--fg-secondary);
+  color: var(--fg);
   border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 0.86rem;
-  font-weight: 600;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  padding: 5px 12px;
+  font-size: 0.84rem;
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: var(--shadow-sm);
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.ward-btn b {
+  font-weight: 700;
 }
 
 .ward-btn .count-tag {
-  background: var(--bg);
   color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: 999px;
-  font-variant-numeric: tabular-nums;
-}
-
-.ward-btn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+  margin-left: 4px;
 }
 
 .ward-btn[aria-pressed="true"] {
   background: var(--primary);
   border-color: var(--primary);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.25);
 }
 
 .ward-btn[aria-pressed="true"] .count-tag {
-  background: rgba(255, 255, 255, 0.22);
   color: #ffffff;
+  opacity: 0.85;
 }
 
-/* Status & House Filter Bar */
+/* Results Status Bar */
 .results-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
-  font-size: 0.92rem;
+  gap: 8px;
+  font-size: 0.88rem;
   color: var(--muted);
-  padding: 2px 4px;
 }
 
 .results-header b {
@@ -698,21 +650,14 @@ main.app-main {
 }
 
 .house-filter-badge {
-  background: var(--accent-light);
-  color: var(--accent);
-  padding: 3px 10px;
-  border-radius: 8px;
+  color: var(--primary);
   font-weight: 700;
-  font-size: 0.84rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .clear-house-btn {
   background: none;
   border: none;
-  color: var(--accent);
+  color: var(--primary);
   cursor: pointer;
   text-decoration: underline;
   padding: 0;
@@ -720,107 +665,98 @@ main.app-main {
 }
 
 /* =========================================================
-   VOTER SLIP CARDS - CUSTOM MODERN ELEVATION
+   VOTER SLIP CARDS - HIGH PERFORMANCE FLUID GRID
+   Adapts perfectly from 1 column on phone to 3+ on laptop
    ========================================================= */
 .voter-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr));
+  gap: 10px;
+  width: 100%;
 }
 
 .voter-card {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 16px 18px;
+  border-radius: 12px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-  position: relative;
-  overflow: hidden;
+  gap: 7px;
+  min-width: 0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .voter-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--line-strong);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .voter-card.flagged {
-  border-left: 4px solid var(--warn-fg);
+  border-left: 3px solid var(--warn-fg);
 }
 
-/* Card Header Strip */
 .card-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed var(--line);
+  font-size: 0.78rem;
+  color: var(--muted);
 }
 
 .ward-sl-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--primary);
   background: var(--primary-light);
-  padding: 3px 8px;
-  border-radius: 6px;
-  letter-spacing: 0.02em;
+  color: var(--primary);
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 1px 7px;
 }
 
 .ac-roll-badge {
-  font-size: 0.74rem;
   font-family: var(--font-mono);
+  font-size: 0.74rem;
   color: var(--muted);
-  font-weight: 600;
 }
 
-/* Names Section */
 .card-names {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  min-width: 0;
 }
 
 .voter-name-en {
-  font-size: 1.15rem;
+  font-size: 1.08rem;
   font-weight: 700;
+  line-height: 1.25;
   color: var(--fg);
-  line-height: 1.28;
   overflow-wrap: anywhere;
 }
 
 .voter-name-te {
   font-family: var(--font-telugu);
-  font-size: 0.98rem;
+  font-size: 0.94rem;
   font-weight: 600;
   color: var(--primary);
   overflow-wrap: anywhere;
 }
 
-/* Relation Section */
 .card-relation {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   font-size: 0.88rem;
   background: var(--bg);
-  padding: 8px 10px;
-  border-radius: 10px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
 }
 
 .rel-header {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--muted);
 }
 
@@ -831,74 +767,62 @@ main.app-main {
 
 .rel-name-te {
   font-family: var(--font-telugu);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   color: var(--muted);
 }
 
-/* Meta Attributes Row */
 .card-meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px 10px;
+  font-size: 0.84rem;
   align-items: center;
 }
 
 .meta-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 0.78rem;
   font-weight: 600;
-  border: 1px solid transparent;
 }
 
 .meta-chip.gender-male {
   background: var(--male-bg);
   color: var(--male-fg);
-  border-color: var(--male-border);
 }
 
 .meta-chip.gender-female {
   background: var(--female-bg);
   color: var(--female-fg);
-  border-color: var(--female-border);
 }
 
 .meta-chip.age-chip {
   background: var(--bg);
   color: var(--fg-secondary);
-  border-color: var(--line);
 }
 
 .house-btn {
-  background: var(--bg);
-  border: 1px solid var(--line);
+  background: none;
+  border: 0;
+  padding: 0;
   color: var(--primary);
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
+  font-size: 0.84rem;
+  text-align: left;
 }
 
-.house-btn:hover {
-  background: var(--primary-light);
-  border-color: var(--primary);
-}
-
-/* Card Footer: EPIC & Roll Reference */
 .card-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid var(--line);
   margin-top: auto;
 }
@@ -911,22 +835,20 @@ main.app-main {
 
 .epic-id {
   font-family: var(--font-mono);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: var(--fg);
 }
 
 .copy-btn {
-  background: var(--bg);
   border: 1px solid var(--line);
+  background: none;
   color: var(--muted);
-  border-radius: 6px;
-  padding: 2px 7px;
+  border-radius: 5px;
+  padding: 1px 6px;
   font-size: 0.72rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
 }
 
 .copy-btn:hover {
@@ -935,60 +857,100 @@ main.app-main {
 }
 
 .roll-page {
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   color: var(--muted);
 }
 
 .flag-alert {
-  font-size: 0.75rem;
+  font-size: 0.74rem;
   color: var(--warn-fg);
   background: var(--warn-bg);
-  border: 1px solid var(--warn-border);
-  border-radius: 6px;
-  padding: 4px 8px;
+  border-radius: 5px;
+  padding: 3px 6px;
 }
 
 /* Pagination & Empty States */
 .load-more-btn {
   justify-self: center;
-  background: var(--primary);
-  color: #ffffff;
-  border: none;
-  padding: 10px 28px;
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  padding: 8px 24px;
+  border-radius: 8px;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(var(--primary-rgb), 0.25);
-  transition: all 0.15s ease;
+  transition: all 0.12s ease;
 }
 
 .load-more-btn:hover {
-  background: var(--primary-hover);
-  transform: translateY(-1px);
+  background: var(--primary-light);
 }
 
 .empty-state {
   text-align: center;
   color: var(--muted);
-  padding: 60px 16px;
-  background: var(--surface);
-  border: 1px dashed var(--line-strong);
-  border-radius: 18px;
+  padding: 40px 16px;
   grid-column: 1 / -1;
 }
 
 footer.app-footer {
-  padding-top: 24px;
+  padding-top: 16px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.6;
+  font-size: 0.8rem;
+  line-height: 1.5;
   text-align: center;
 }
 
 footer.app-footer strong {
   color: var(--fg);
+}
+
+/* =========================================================
+   MEDIA QUERIES FOR SMART DEVICE ADJUSTMENTS
+   ========================================================= */
+@media (max-width: 640px) {
+  header.app-header .wrap {
+    padding-block: 10px 8px;
+    gap: 7px;
+  }
+  .brand-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .developer-badge {
+    align-items: flex-start;
+    text-align: left;
+    padding: 4px 8px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+  .dev-tagline {
+    width: 100%;
+  }
+  .controls-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .controls-bar select {
+    width: 100%;
+  }
+  .ctrl-toggle {
+    grid-column: 1 / -1;
+  }
+  .voter-grid {
+    grid-template-columns: 1fr; /* Full width clean single column on mobile */
+  }
+  .metrics-strip {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px 8px;
+    font-size: 0.76rem;
+  }
 }
 
 @media print {
@@ -998,7 +960,7 @@ footer.app-footer strong {
   .voter-card {
     break-inside: avoid;
     box-shadow: none;
-    border: 1px solid #ccc;
+    border: 1px solid #999;
   }
   body {
     background: #fff;
@@ -1057,103 +1019,71 @@ footer.app-footer strong {
      HEADER BAR WITH PROMINENT DEVELOPER BRANDING
      ============================================== -->
 <header class="app-header">
-  <div class="app-wrapper">
-    <div class="header-inner">
-      <div class="brand-row">
-        <div class="branding">
-          <span class="gov-pill">SEC Andhra Pradesh · 2026 Casual Elections</span>
-          <div class="app-title-group">
-            <h1 class="app-title">Pathakunkam Voter Finder</h1>
-            <span class="app-title-te">పాతకుంకం గ్రామ పంచాయతీ</span>
-          </div>
-          <div class="location-meta">
-            Laveru Mandal · Srikakulam District · 7-Etcherla Assembly Constituency · Polling Station 67
-          </div>
+  <div class="wrap">
+    <div class="brand-row">
+      <div class="branding">
+        <span class="gov-pill">SEC Andhra Pradesh · 2026 Casual Elections</span>
+        <div class="app-title-group">
+          <h1 class="app-title">Pathakunkam Voter Finder</h1>
+          <span class="app-title-te">పాతకుంకం గ్రామ పంచాయతీ</span>
         </div>
-
-        <!-- Prominently displayed Developer Badge -->
-        <div class="developer-badge">
-          <span class="dev-tagline">Crafted & Developed by</span>
-          <span class="dev-name-en">Vishal Dangudubiyyapu</span>
-          <span class="dev-name-te">విశాల్ దంగుడుబియ్యపు</span>
+        <div class="location-meta">
+          Laveru Mandal · Srikakulam District · 7-Etcherla AC · Polling Station 67
         </div>
       </div>
 
-      <!-- Search Bar -->
-      <div class="search-container">
-        <span class="search-icon">🔍</span>
-        <input id="q" type="search" autocomplete="off" placeholder="Search by Voter Name, Relative, House No., or Voter ID (English or తెలుగు)..." aria-label="Search voters">
-        <button id="clearq" class="search-clear" aria-label="Clear search">✕</button>
+      <!-- Developer Badge Requested by User -->
+      <div class="developer-badge">
+        <span class="dev-tagline">Crafted & Developed by</span>
+        <span class="dev-name-en">Vishal Dangudubiyyapu</span>
+        <span class="dev-name-te">విశాల్ దంగుడుబియ్యపు</span>
       </div>
+    </div>
 
-      <!-- Filter Controls -->
-      <div class="controls-bar">
-        <select id="gender" class="ctrl-select" aria-label="Gender Filter">
-          <option value="">All Genders (1,274)</option>
-          <option value="M">Male (635)</option>
-          <option value="F">Female (639)</option>
-        </select>
-        <select id="age" class="ctrl-select" aria-label="Age Group">
-          <option value="">All Ages</option>
-          <option value="18-25">18–25 (Young)</option>
-          <option value="26-40">26–40</option>
-          <option value="41-60">41–60</option>
-          <option value="61-200">61+</option>
-        </select>
-        <select id="sort" class="ctrl-select" aria-label="Sort Order">
-          <option value="serial">Sort: Serial No.</option>
-          <option value="name">Sort: Name (A–Z)</option>
-          <option value="house">Sort: House No.</option>
-          <option value="age">Sort: Age</option>
-        </select>
-        <label class="ctrl-toggle"><input type="checkbox" id="review"> Check list only</label>
-      </div>
+    <!-- Search Bar -->
+    <div class="search-container">
+      <span class="search-icon">🔍</span>
+      <input id="q" type="search" autocomplete="off" placeholder="Name, father/husband, door no., or voter ID (English or తెలుగు)..." aria-label="Search voters">
+      <button id="clearq" class="search-clear" aria-label="Clear search">✕</button>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="controls-bar">
+      <select id="gender" class="ctrl-select" aria-label="Gender Filter">
+        <option value="">All Genders (1,274)</option>
+        <option value="M">Male (635)</option>
+        <option value="F">Female (639)</option>
+      </select>
+      <select id="age" class="ctrl-select" aria-label="Age Group">
+        <option value="">All Ages</option>
+        <option value="18-25">18–25 (Young)</option>
+        <option value="26-40">26–40</option>
+        <option value="41-60">41–60</option>
+        <option value="61-200">61+</option>
+      </select>
+      <select id="sort" class="ctrl-select" aria-label="Sort Order">
+        <option value="serial">Sort: Serial No.</option>
+        <option value="name">Sort: Name (A–Z)</option>
+        <option value="house">Sort: House No.</option>
+        <option value="age">Sort: Age</option>
+      </select>
+      <label class="ctrl-toggle"><input type="checkbox" id="review"> Check list only</label>
     </div>
   </div>
 </header>
 
 <main class="app-main">
-  <div class="app-wrapper">
-    <!-- Quick Statistics Strip -->
+  <div class="wrap">
+    <!-- Compact Summary Metrics -->
     <div class="metrics-strip">
-      <div class="metric-pill">
-        <span class="metric-icon">👥</span>
-        <div class="metric-info">
-          <span class="metric-val">1,274</span>
-          <span class="metric-lbl">Total Voters</span>
-        </div>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-icon">👨</span>
-        <div class="metric-info">
-          <span class="metric-val">635</span>
-          <span class="metric-lbl">Male</span>
-        </div>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-icon">👩</span>
-        <div class="metric-info">
-          <span class="metric-val">639</span>
-          <span class="metric-lbl">Female</span>
-        </div>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-icon">🏛️</span>
-        <div class="metric-info">
-          <span class="metric-val">8 Wards</span>
-          <span class="metric-lbl">Wards 1–8</span>
-        </div>
-      </div>
-      <div class="metric-pill">
-        <span class="metric-icon">🏠</span>
-        <div class="metric-info">
-          <span class="metric-val">1-1 to 2-144</span>
-          <span class="metric-lbl">House Numbers</span>
-        </div>
-      </div>
+      <span>👥 <b>1,274</b> Voters</span>
+      <span>👨 <b>635</b> M</span>
+      <span>👩 <b>639</b> F</span>
+      <span>🏛️ <b>8</b> Wards</span>
+      <span>🏠 Doors <b>1-1 to 2-144</b></span>
     </div>
 
-    <!-- Ward Navigation Strip -->
+    <!-- Ward Segment Selector -->
     <div class="ward-scroll" id="wards" role="group" aria-label="Filter by ward"></div>
 
     <!-- Results Status -->
@@ -1172,7 +1102,7 @@ footer.app-footer strong {
     <footer class="app-footer">
       Official Electoral Directory for <strong>పాతకుంకం గ్రామ పంచాయతీ (Pathakunkam)</strong>, Laveru Mandal, Srikakulam District.<br>
       Constituency: <strong>7-Etcherla Assembly Constituency · Polling Station 67</strong>.<br>
-      Application designed and engineered by <strong>Vishal Dangudubiyyapu (విశాల్ దంగుడుబియ్యపు)</strong>.
+      Engineered by <strong>Vishal Dangudubiyyapu (విశాల్ దంగుడుబియ్యపు)</strong>.
     </footer>
   </div>
 </main>
@@ -1185,8 +1115,7 @@ footer.app-footer strong {
 // ========================================================
 // 1. SECURITY PIN CONFIGURATION
 // ========================================================
-// The access PIN is configured directly in code as requested.
-// Current active PIN is 2311.
+// Access PIN configured directly in code. Current active PIN is 2311.
 const ACCESS_PIN = "2311";
 
 let enteredPin = "";
@@ -1322,7 +1251,7 @@ function wardsUI() {
   const counts = {};
   V.forEach(v => counts[v.ward] = (counts[v.ward] || 0) + 1);
   const ws = Object.keys(counts).map(Number).sort((a, b) => a - b);
-  const mk = (w, label, n) => `<button class="ward-btn" data-w="${w}" aria-pressed="${String(w) === ward}"><span>${label}</span><span class="count-tag">${n.toLocaleString("en-IN")}</span></button>`;
+  const mk = (w, label, n) => `<button class="ward-btn" data-w="${w}" aria-pressed="${String(w) === ward}"><b>${label}</b><span class="count-tag">${n.toLocaleString("en-IN")}</span></button>`;
   $("wards").innerHTML = mk("", "All Wards", V.length) + ws.map(w => mk(w, "Ward " + w, counts[w])).join("");
 }
 
@@ -1382,7 +1311,7 @@ function slip(v) {
     <div class="card-meta-row">
       <span class="meta-chip ${genderClass}">${genderLabel}</span>
       <span class="meta-chip age-chip">Age ${v.age ?? "?"}</span>
-      <button class="house-btn" data-h="${esc(v.ward + "|" + v._h)}" data-label="${esc(v.house)}" title="Filter all family members at this house">
+      <button class="house-btn" data-h="${esc(v.ward + "|" + v._h)}" data-label="${esc(v.house)}" title="Show everyone at this house">
         🏠 ${esc(v.house) || "?"}
       </button>
     </div>
@@ -1393,7 +1322,7 @@ function slip(v) {
       </div>
       <span class="roll-page">p.${v.page}</span>
     </div>
-    ${flag ? `<div class="flag-alert">Check printed roll: ${esc(v.review.join(", "))}</div>` : ""}
+    ${flag ? `<div class="flag-alert">Check roll: ${esc(v.review.join(", "))}</div>` : ""}
   </article>`;
 }
 
@@ -1406,7 +1335,7 @@ function render(reset) {
     (q ? ` matching “<b>${esc(q)}</b>”` : "") + (ward ? ` in <b>Ward ${ward}</b>` : "");
   $("housef").innerHTML = house ? `<span class="house-filter-badge">Door No. ${esc(house.label)}</span> · <button class="clear-house-btn" id="clearh">show all doors</button>` : "";
   $("list").innerHTML = out.length ? out.slice(0, shown).map(slip).join("") :
-    `<div class="empty-state">No voters found matching your query. Try a partial name in English or Telugu, or search the door/EPIC number.</div>`;
+    `<div class="empty-state">No voters found. Try fewer letters of the name, or search the door/EPIC number.</div>`;
   $("more").hidden = out.length <= shown;
   $("more").textContent = `Show more voters (${(out.length - shown).toLocaleString("en-IN")} remaining)`;
 }
