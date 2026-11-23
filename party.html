@@ -1399,7 +1399,7 @@ footer.app-footer {
     
     <div class="modal-field">
       <label for="firebase-url-input">Firebase Realtime Database URL</label>
-      <input type="url" id="firebase-url-input" placeholder="https://pk-cadre-default-rtdb.firebaseio.com">
+      <input type="url" id="firebase-url-input" placeholder="https://pkm-cadre-default-rtdb.firebaseio.com">
       <span style="font-size:0.75rem;color:var(--muted);margin-top:2px;">
         Must end in <code>.firebaseio.com</code> or <code>.firebasedatabase.app</code>
       </span>
@@ -1945,11 +1945,13 @@ if (saveNewPinBtn) {
 
     // Broadcast to Firebase so all devices immediately lose access
     if (firebaseDb) {
-      firebaseDb.ref("config/pin").set({
+      const pinPayload = {
         hash: newHash,
         epoch: newEpoch,
         updatedAt: new Date().toISOString()
-      }).catch(e => console.warn("Firebase pin sync:", e));
+      };
+      firebaseDb.ref("config/party_pin").set(pinPayload).catch(e => console.warn("Firebase pin sync:", e));
+      firebaseDb.ref("config/pin").set(pinPayload).catch(e => console.warn("Firebase pin sync:", e));
     }
 
     showAdminMsg("success", "✓ PIN successfully updated! All active sessions have been revoked. Please enter the new PIN.");
@@ -2044,7 +2046,7 @@ if (confirmResetMappingsBtn) {
 // ========================================================
 // 3. LIVE CLOUD REALTIME DATABASE SYNC ENGINE
 // ========================================================
-const HARDCODED_FIREBASE_URL = ""; 
+const HARDCODED_FIREBASE_URL = "https://pkm-cadre-default-rtdb.firebaseio.com"; 
 
 function getFirebaseUrl() {
   try {
@@ -2189,11 +2191,11 @@ async function connectCloudSync(dbUrl) {
     firebaseDb = firebase.database();
 
     // Listen for remote PIN resets to immediately revoke access on all devices
-    firebaseDb.ref("config/pin").on("value", (snapshot) => {
+    const onPartyPinReset = (snapshot) => {
       const cfg = snapshot.val();
       if (cfg && cfg.epoch) {
         const localEpoch = getPinEpoch();
-        if (cfg.epoch > localEpoch) {
+        if (cfg.epoch > localEpoch || !localStorage.getItem("pkm_party_pin_hash")) {
           localStorage.setItem("pkm_party_pin_hash", cfg.hash);
           localStorage.setItem("pkm_pin_epoch", String(cfg.epoch));
           clearAuthSession();
@@ -2207,7 +2209,10 @@ async function connectCloudSync(dbUrl) {
           }
         }
       }
-    });
+    };
+
+    firebaseDb.ref("config/party_pin").on("value", onPartyPinReset);
+    firebaseDb.ref("config/pin").on("value", onPartyPinReset);
 
     // Test permission by reading marks once
     firebaseDb.ref("marks").once("value").then((snapshot) => {

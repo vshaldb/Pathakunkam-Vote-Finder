@@ -1337,15 +1337,60 @@ footer.app-footer strong {
 // 1. SECURITY PIN & 6-HOUR SESSION AUTHENTICATION
 // ========================================================
 const DEFAULT_ACCESS_PIN = "2311";
+const DEFAULT_FIREBASE_URL = "https://pkm-cadre-default-rtdb.firebaseio.com";
 const PUBLIC_AUTH_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
 const PUBLIC_AUTH_SESSION_KEY = "pkm_public_auth_session";
 const PUBLIC_AUTH_EPOCH_KEY = "pkm_public_auth_epoch";
+
+// Firebase initialization for real-time cross-device public PIN sync
+let publicFirebaseDb = null;
+if (window.firebase) {
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp({ databaseURL: DEFAULT_FIREBASE_URL });
+    }
+    publicFirebaseDb = firebase.database();
+  } catch (e) {
+    console.warn("Firebase public DB init error:", e);
+  }
+}
 
 // Admin Credentials (Username: vshaldb)
 const ADMIN_USERNAME = "vshaldb";
 const ADMIN_RAW_PASSWORD = ""; 
 const ADMIN_PASSWORD_HASH = "9e6c1ebfc83a687ba7d832795164aea62c06d8b94ce5e5b0948edc9c5872fb01";
 const ADMIN_SALT = "pkm_admin_salt_2026_";
+
+// Listen to Firebase for live public PIN updates across all devices & new mobiles
+if (publicFirebaseDb) {
+  publicFirebaseDb.ref("config/public_pin").on("value", (snapshot) => {
+    const cfg = snapshot.val();
+    if (cfg && cfg.pin) {
+      const remoteEpoch = Number(cfg.epoch || 0);
+      const localEpoch = getPublicPinEpoch();
+      
+      // If remote has newer epoch or if this mobile has no stored PIN yet:
+      if (remoteEpoch > localEpoch || !localStorage.getItem("pkm_public_pin")) {
+        localStorage.setItem("pkm_public_pin", cfg.pin);
+        localStorage.setItem("pkm_public_pin_epoch", String(remoteEpoch));
+        
+        // Revoke active session if older than remoteEpoch
+        const sessionEpoch = Number(localStorage.getItem(PUBLIC_AUTH_EPOCH_KEY) || "0");
+        if (sessionEpoch < remoteEpoch) {
+          clearPublicSession();
+          if (pinOverlay && pinOverlay.style.display === "none") {
+            pinOverlay.style.display = "flex";
+            pinOverlay.style.opacity = "1";
+            enteredPin = "";
+            updateCells();
+            pinStatus.textContent = "⚠️ PIN reset by Admin. Enter new PIN.";
+            pinStatus.className = "pin-info error";
+          }
+        }
+      }
+    }
+  });
+}
 
 function calcSha256(ascii) {
   function rightRotate(value, amount) {
@@ -1695,19 +1740,13 @@ if (saveNewPinBtn) {
     localStorage.setItem("pkm_public_pin_epoch", String(newEpoch));
     clearPublicSession(); // Revoke all active sessions!
 
-    // Broadcast to Firebase so all devices immediately lose access
-    const dbUrl = localStorage.getItem("pkm_cloud_db_url");
-    if (dbUrl && window.firebase) {
-      try {
-        if (!firebase.apps.length) {
-          firebase.initializeApp({ databaseURL: dbUrl });
-        }
-        firebase.database().ref("config/public_pin").set({
-          pin: p1,
-          epoch: newEpoch,
-          updatedAt: new Date().toISOString()
-        }).catch(e => console.warn("Firebase pin sync:", e));
-      } catch (e) {}
+    // Broadcast to Firebase so all devices (including new mobiles) immediately enforce the new PIN
+    if (publicFirebaseDb) {
+      publicFirebaseDb.ref("config/public_pin").set({
+        pin: p1,
+        epoch: newEpoch,
+        updatedAt: new Date().toISOString()
+      }).catch(e => console.warn("Firebase pin sync:", e));
     }
 
     showAdminMsg("success", "✓ PIN successfully updated! All active sessions have been revoked. Please enter the new PIN.");
@@ -1725,37 +1764,6 @@ if (saveNewPinBtn) {
     }, 1000);
   });
 }
-
-// Listen to Firebase for remote PIN resets if database URL is configured
-(function initPublicPinSync() {
-  const dbUrl = localStorage.getItem("pkm_cloud_db_url");
-  if (dbUrl && window.firebase) {
-    try {
-      if (!firebase.apps.length) {
-        firebase.initializeApp({ databaseURL: dbUrl });
-      }
-      firebase.database().ref("config/public_pin").on("value", (snapshot) => {
-        const cfg = snapshot.val();
-        if (cfg && cfg.epoch) {
-          const localEpoch = getPublicPinEpoch();
-          if (cfg.epoch > localEpoch) {
-            localStorage.setItem("pkm_public_pin", cfg.pin);
-            localStorage.setItem("pkm_public_pin_epoch", String(cfg.epoch));
-            clearPublicSession();
-            if (pinOverlay) {
-              pinOverlay.style.display = "flex";
-              pinOverlay.style.opacity = "1";
-              enteredPin = "";
-              updateCells();
-              pinStatus.textContent = "⚠️ PIN reset by Admin. Enter new PIN.";
-              pinStatus.className = "pin-info error";
-            }
-          }
-        }
-      });
-    } catch (e) {}
-  }
-})();
 
 // ========================================================
 // 3. DATA PROCESSING & SEARCH ENGINE
