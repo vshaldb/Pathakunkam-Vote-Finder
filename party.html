@@ -752,6 +752,35 @@ select.ctrl-select, .ctrl-btn {
   border-color: var(--muted);
 }
 
+.btn-danger {
+  background: #ef4444;
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.25);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(239, 68, 68, 0.35);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+}
+
 /* Main Content Area */
 main.app-main .wrap {
   padding-block: 12px 48px;
@@ -1324,6 +1353,41 @@ footer.app-footer {
   </div>
 </div>
 
+<!-- Admin Reset All Voter Mappings Modal -->
+<div id="reset-mappings-modal" class="modal-overlay" style="display:none;z-index:100000;">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;font-size:1.15rem;color:#ef4444;">🗑️ Admin: Reset All Voter Mappings</h3>
+      <button id="close-reset-mappings-x" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);padding:0 4px;line-height:1;" title="Close">✕</button>
+    </div>
+
+    <div style="font-size:0.83rem;color:var(--muted);line-height:1.4;">
+      This will permanently clear <b>all voter support markings</b> ("Sure" and "Doubt") and return every voter back to "Others / Empty" on this device and synced cloud devices.
+    </div>
+
+    <div id="reset-mappings-msg" style="display:none;font-size:0.82rem;padding:8px 12px;border-radius:8px;font-weight:600;"></div>
+
+    <div class="modal-field">
+      <label for="admin-reset-username">Admin Username</label>
+      <input type="text" id="admin-reset-username" value="vshaldb" readonly disabled style="background:#f1f5f9;color:#475569;cursor:not-allowed;font-weight:700;">
+    </div>
+
+    <div class="modal-field">
+      <label for="admin-reset-password">Admin Password</label>
+      <input type="password" id="admin-reset-password" placeholder="Enter admin password to confirm" autocomplete="current-password">
+    </div>
+
+    <div style="font-size:0.75rem;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:8px 10px;border-radius:6px;line-height:1.4;">
+      ⚠️ <b>Warning:</b> This action cannot be undone! Ensure you have an <b>Export (📥)</b> backup if you wish to preserve the current markings.
+    </div>
+
+    <div class="modal-btns" style="justify-content:flex-end;gap:8px;">
+      <button class="btn-secondary" id="close-reset-mappings-btn">Cancel</button>
+      <button class="btn-danger" id="confirm-reset-mappings-btn">Erase All Mappings</button>
+    </div>
+  </div>
+</div>
+
 <div id="sync-modal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
     <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -1439,6 +1503,7 @@ footer.app-footer {
       <button class="ctrl-btn" id="open-sync-btn" title="Configure Cloud Sync">☁️ Cloud Sync</button>
       <button class="ctrl-btn" id="export-btn" title="Backup or Export Survey Data">📥 Export</button>
       <button class="ctrl-btn" id="import-btn" title="Import / Merge Survey Data">📤 Import</button>
+      <button class="ctrl-btn" id="open-reset-mappings-btn" title="Admin: Reset all voter support mappings (Sure &amp; Doubt)" style="color:var(--danger);border-color:var(--danger-soft);">🗑️ Reset Mappings</button>
       <input type="file" id="import-file-input" accept=".json" style="display:none;">
     </div>
   </div>
@@ -1740,7 +1805,8 @@ window.addEventListener("keydown", (e) => {
   if (pinOverlay && pinOverlay.style.display === "none") return;
   const syncM = document.getElementById("sync-modal");
   const adminM = document.getElementById("admin-pin-modal");
-  if ((syncM && syncM.style.display === "flex") || (adminM && adminM.style.display === "flex")) return;
+  const resetM = document.getElementById("reset-mappings-modal");
+  if ((syncM && syncM.style.display === "flex") || (adminM && adminM.style.display === "flex") || (resetM && resetM.style.display === "flex")) return;
   
   if (e.key >= "0" && e.key <= "9") handleDigit(e.key);
   else if (e.key === "Backspace") handleBack();
@@ -1899,6 +1965,79 @@ if (saveNewPinBtn) {
         pinStatus.style.color = "var(--sure-color)";
       }
     }, 1000);
+  });
+}
+
+// ========================================================
+// 2b. ADMIN RESET ALL VOTER MAPPINGS (SURE & DOUBT)
+// ========================================================
+const resetMappingsModal = document.getElementById("reset-mappings-modal");
+const openResetMappingsBtn = document.getElementById("open-reset-mappings-btn");
+const closeResetMappingsBtn = document.getElementById("close-reset-mappings-btn");
+const closeResetMappingsX = document.getElementById("close-reset-mappings-x");
+const confirmResetMappingsBtn = document.getElementById("confirm-reset-mappings-btn");
+const adminResetPwdInput = document.getElementById("admin-reset-password");
+const resetMappingsMsg = document.getElementById("reset-mappings-msg");
+
+function showResetMappingsModal() {
+  if (adminResetPwdInput) adminResetPwdInput.value = "";
+  if (resetMappingsMsg) resetMappingsMsg.style.display = "none";
+  if (resetMappingsModal) resetMappingsModal.style.display = "flex";
+  if (adminResetPwdInput) adminResetPwdInput.focus();
+}
+
+function hideResetMappingsModal() {
+  if (resetMappingsModal) resetMappingsModal.style.display = "none";
+}
+
+if (openResetMappingsBtn) openResetMappingsBtn.addEventListener("click", showResetMappingsModal);
+if (closeResetMappingsBtn) closeResetMappingsBtn.addEventListener("click", hideResetMappingsModal);
+if (closeResetMappingsX) closeResetMappingsX.addEventListener("click", hideResetMappingsModal);
+if (resetMappingsModal) {
+  resetMappingsModal.addEventListener("click", (e) => {
+    if (e.target === resetMappingsModal) hideResetMappingsModal();
+  });
+}
+
+function showResetMappingsError(text) {
+  if (!resetMappingsMsg) return;
+  resetMappingsMsg.style.display = "block";
+  resetMappingsMsg.style.background = "#fee2e2";
+  resetMappingsMsg.style.color = "#dc2626";
+  resetMappingsMsg.style.border = "1px solid #fecaca";
+  resetMappingsMsg.innerHTML = text;
+}
+
+if (confirmResetMappingsBtn) {
+  confirmResetMappingsBtn.addEventListener("click", () => {
+    const pwd = adminResetPwdInput.value;
+    if (!pwd) {
+      showResetMappingsError("Please enter the admin password.");
+      adminResetPwdInput.focus();
+      return;
+    }
+
+    if (!verifyAdminPassword(pwd)) {
+      showResetMappingsError("✕ Incorrect admin password. Access denied.");
+      adminResetPwdInput.value = "";
+      adminResetPwdInput.focus();
+      return;
+    }
+
+    // Admin verified: wipe all markings
+    MARKS = {};
+    saveLocalMarks(MARKS);
+
+    if (firebaseDb) {
+      firebaseDb.ref("marks").remove().catch(e => console.warn("Firebase marks wipe error:", e));
+    }
+
+    updateMetrics();
+    refreshVisibleCards();
+    render(true);
+
+    hideResetMappingsModal();
+    alert("✅ All voter support markings have been completely cleared and reset to empty!");
   });
 }
 
