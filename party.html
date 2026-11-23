@@ -36,17 +36,20 @@
   --muted: #64748b;
   
   /* Status Colors */
-  --sure-color: #10b981;
+  --sure-color: #059669;
   --sure-bg: #ecfdf5;
-  --sure-border: #a7f3d0;
+  --sure-border: #10b981;
+  --sure-val: #065f46;
   
-  --doubt-color: #f59e0b;
+  --doubt-color: #d97706;
   --doubt-bg: #fffbeb;
-  --doubt-border: #fde68a;
+  --doubt-border: #f59e0b;
+  --doubt-val: #92400e;
 
-  --empty-color: #64748b;
+  --empty-color: #475569;
   --empty-bg: #f1f5f9;
-  --empty-border: #cbd5e1;
+  --empty-border: #94a3b8;
+  --empty-val: #1e293b;
 
   --male-bg: #eff6ff;
   --male-fg: #1d4ed8;
@@ -85,16 +88,19 @@
     --muted: #94a3b8;
     
     --sure-color: #34d399;
-    --sure-bg: rgba(16, 185, 129, 0.15);
-    --sure-border: rgba(16, 185, 129, 0.35);
+    --sure-bg: rgba(16, 185, 129, 0.18);
+    --sure-border: #10b981;
+    --sure-val: #34d399;
     
     --doubt-color: #fbbf24;
-    --doubt-bg: rgba(245, 158, 11, 0.15);
-    --doubt-border: rgba(245, 158, 11, 0.35);
+    --doubt-bg: rgba(245, 158, 11, 0.18);
+    --doubt-border: #f59e0b;
+    --doubt-val: #fbbf24;
 
-    --empty-color: #94a3b8;
-    --empty-bg: rgba(100, 116, 139, 0.15);
-    --empty-border: rgba(100, 116, 139, 0.3);
+    --empty-color: #cbd5e1;
+    --empty-bg: rgba(100, 116, 139, 0.18);
+    --empty-border: #64748b;
+    --empty-val: #f8fafc;
 
     --male-bg: rgba(59, 130, 246, 0.14);
     --male-fg: #93c5fd;
@@ -697,21 +703,53 @@ select.ctrl-select, .ctrl-btn {
 
 .btn-primary {
   background: #10b981;
-  color: #fff;
+  color: #ffffff;
   border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
   font-weight: 700;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.25);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary:hover {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.35);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
 }
 
 .btn-secondary {
   background: var(--bg);
   color: var(--fg);
-  border: 1px solid var(--line);
-  padding: 8px 14px;
-  border-radius: 8px;
+  border: 1px solid var(--line-strong);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-secondary:hover {
+  background: var(--surface);
+  border-color: var(--muted);
 }
 
 /* Main Content Area */
@@ -752,31 +790,67 @@ main.app-main .wrap {
 .metric-card.active {
   opacity: 1;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .metric-card[data-filter="all"].active {
   border-color: var(--primary);
   background: var(--primary-light);
-  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.18);
+  box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2);
+}
+.metric-card[data-filter="all"].active .metric-val {
+  color: var(--primary);
+}
+.metric-card[data-filter="all"].active .metric-lbl {
+  color: var(--primary);
+}
+.metric-card[data-filter="all"] .filter-check-badge {
+  color: var(--primary);
 }
 
 .metric-card.sure-card.active {
-  border-color: #10b981;
-  background: #ecfdf5;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  border-color: var(--sure-border);
+  background: var(--sure-bg);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+.metric-card.sure-card.active .metric-val {
+  color: var(--sure-val);
+}
+.metric-card.sure-card.active .metric-lbl {
+  color: var(--sure-color);
+}
+.metric-card.sure-card .filter-check-badge {
+  color: var(--sure-color);
 }
 
 .metric-card.doubt-card.active {
-  border-color: #f59e0b;
-  background: #fffbeb;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+  border-color: var(--doubt-border);
+  background: var(--doubt-bg);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+.metric-card.doubt-card.active .metric-val {
+  color: var(--doubt-val);
+}
+.metric-card.doubt-card.active .metric-lbl {
+  color: var(--doubt-color);
+}
+.metric-card.doubt-card .filter-check-badge {
+  color: var(--doubt-color);
 }
 
 .metric-card.empty-card.active {
-  border-color: #64748b;
-  background: #f1f5f9;
-  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2);
+  border-color: var(--empty-border);
+  background: var(--empty-bg);
+  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.25);
+}
+.metric-card.empty-card.active .metric-val {
+  color: var(--empty-val);
+}
+.metric-card.empty-card.active .metric-lbl {
+  color: var(--empty-color);
+}
+.metric-card.empty-card .filter-check-badge {
+  color: var(--empty-color);
 }
 
 .metric-card .filter-check-badge {

@@ -7,6 +7,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Telugu:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap">
+<!-- Firebase Realtime Database SDK for synchronized public PIN updates -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
 /* =========================================================
    ADAPTIVE DESIGN SYSTEM: "ANDHRA SAPPHIRE & TEAL"
@@ -365,9 +369,7 @@ body::before {
 header.app-header {
   background: var(--surface);
   border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: env(safe-area-inset-top, 0px);
-  z-index: 50;
+  position: relative;
   box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
 
@@ -967,6 +969,180 @@ footer.app-footer strong {
     color: #000;
   }
 }
+
+/* Modal Overlay & Card System */
+
+/* =========================================================
+   FLUID MODAL SYSTEM (Touch-scrolling, Auto-sizing, Mobile-first)
+   ========================================================= */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  backdrop-filter: blur(4px);
+  box-sizing: border-box;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 440px;
+  box-sizing: border-box;
+  margin: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px 18px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  display: grid;
+  gap: 12px;
+  text-align: left;
+}
+
+.modal-card h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-field {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-field label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.modal-field input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 9px 12px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--fg);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.modal-field input:focus {
+  border-color: var(--primary);
+}
+
+.pin-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.modal-btns button {
+  flex: 1;
+  min-width: 120px;
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px 8px;
+    align-items: flex-start;
+  }
+  .modal-card {
+    padding: 18px 14px;
+    border-radius: 14px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    max-width: 100%;
+  }
+  .pin-inputs-grid {
+    grid-template-columns: 1fr; /* Stacks vertically on small screens */
+    gap: 10px;
+  }
+  .modal-btns {
+    flex-direction: column-reverse;
+  }
+  .modal-btns button {
+    width: 100%;
+  }
+}
+
+.btn-primary {
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.25);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary:hover {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(16, 185, 129, 0.35);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--line-strong);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-secondary:hover {
+  background: var(--surface);
+  border-color: var(--muted);
+}
+
+
+
 </style>
 </head>
 <body>
@@ -983,7 +1159,8 @@ footer.app-footer strong {
       <span class="te">పాతకుంకం గ్రామ పంచాయతీ ఓటర్ల శోధన</span>
     </div>
     
-    <div class="pin-display">
+    <div class="pin-display" id="pin-display-wrap" title="Tap to enter PIN">
+      <input type="tel" id="pin-hidden-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" autocomplete="one-time-code" style="position:absolute;opacity:0;pointer-events:auto;width:100%;height:60px;top:0;left:0;cursor:pointer;z-index:2;">
       <div class="pin-cell" id="dot-0"></div>
       <div class="pin-cell" id="dot-1"></div>
       <div class="pin-cell" id="dot-2"></div>
@@ -1008,6 +1185,7 @@ footer.app-footer strong {
       <button class="key-btn util" data-action="back">⌫</button>
     </div>
 
+    <div style="margin-top:8px;margin-bottom:12px;"><button type="button" class="admin-reset-link" id="open-admin-pin-modal" style="background:none;border:none;color:var(--muted);font-size:0.78rem;text-decoration:underline;cursor:pointer;padding:4px;" title="Reset PIN with admin credentials">⚙️ Admin: Update PIN</button></div>
     <div class="pin-dev-signature">
       Developed by <strong>Vishal Dangudubiyyapu</strong><br>
       <span class="te">విశాల్ దంగుడుబియ్యపు</span>
@@ -1018,6 +1196,48 @@ footer.app-footer strong {
 <!-- ==============================================
      HEADER BAR WITH PROMINENT DEVELOPER BRANDING
      ============================================== -->
+<!-- Admin PIN Update Modal -->
+<div id="admin-pin-modal" class="modal-overlay" style="display:none;z-index:100000;">
+  <div class="modal-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h3 style="margin:0;font-size:1.15rem;">🔐 Admin: Update Security PIN</h3>
+      <button id="close-admin-pin-x" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);padding:0 4px;line-height:1;" title="Close">✕</button>
+    </div>
+
+    <div id="admin-pin-msg" style="display:none;font-size:0.82rem;padding:8px 12px;border-radius:8px;font-weight:600;"></div>
+
+    <div class="modal-field">
+      <label for="admin-username-input">Admin Username</label>
+      <input type="text" id="admin-username-input" value="vshaldb" readonly disabled style="background:#f1f5f9;color:#475569;cursor:not-allowed;font-weight:700;">
+    </div>
+
+    <div class="modal-field">
+      <label for="admin-password-input">Admin Password</label>
+      <input type="password" id="admin-password-input" placeholder="Enter admin password" autocomplete="current-password">
+    </div>
+
+    <div class="pin-inputs-grid">
+      <div class="modal-field">
+        <label for="new-pin-input">New 4-Digit PIN</label>
+        <input type="password" id="new-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:3px;font-weight:700;font-size:1.1rem;">
+      </div>
+      <div class="modal-field">
+        <label for="confirm-pin-input">Confirm PIN</label>
+        <input type="password" id="confirm-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:3px;font-weight:700;font-size:1.1rem;">
+      </div>
+    </div>
+
+    <div style="font-size:0.75rem;color:#b45309;background:#fffbeb;border:1px solid #fde68a;padding:8px 10px;border-radius:6px;line-height:1.4;">
+      ⚠️ <b>Important:</b> Resetting the PIN will immediately log out all users across all devices and require entering the new PIN.
+    </div>
+
+    <div class="modal-btns" style="justify-content:flex-end;gap:8px;">
+      <button class="btn-secondary" id="close-admin-pin-btn">Cancel</button>
+      <button class="btn-primary" id="save-new-pin-btn">Update PIN &amp; Revoke Sessions</button>
+    </div>
+  </div>
+</div>
+
 <header class="app-header">
   <div class="wrap">
     <div class="brand-row">
@@ -1067,7 +1287,8 @@ footer.app-footer strong {
         <option value="house">Sort: House No.</option>
         <option value="age">Sort: Age</option>
       </select>
-      <label class="ctrl-toggle"><input type="checkbox" id="review"> Check list only</label>
+      <button class="ctrl-btn" id="header-admin-pin-btn" title="Admin: Update PIN" style="padding:6px 12px;border-radius:8px;font-size:0.8rem;cursor:pointer;background:var(--bg);border:1px solid var(--line);color:var(--fg);font-weight:600;">⚙️ Change PIN</button>
+      <button class="ctrl-btn" id="header-lock-btn" title="Lock Portal" style="padding:6px 10px;border-radius:8px;font-size:0.8rem;cursor:pointer;background:var(--bg);border:1px solid var(--line);color:var(--fg);font-weight:600;">🔒 Lock</button>
     </div>
   </div>
 </header>
@@ -1113,15 +1334,139 @@ footer.app-footer strong {
 
 <script>
 // ========================================================
-// 1. SECURITY PIN CONFIGURATION
+// 1. SECURITY PIN & 6-HOUR SESSION AUTHENTICATION
 // ========================================================
-// Access PIN configured directly in code. Current active PIN is 2311.
-const ACCESS_PIN = "2311";
+const DEFAULT_ACCESS_PIN = "2311";
+const PUBLIC_AUTH_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
+const PUBLIC_AUTH_SESSION_KEY = "pkm_public_auth_session";
+const PUBLIC_AUTH_EPOCH_KEY = "pkm_public_auth_epoch";
+
+// Admin Credentials (Username: vshaldb)
+const ADMIN_USERNAME = "vshaldb";
+const ADMIN_RAW_PASSWORD = ""; 
+const ADMIN_PASSWORD_HASH = "9e6c1ebfc83a687ba7d832795164aea62c06d8b94ce5e5b0948edc9c5872fb01";
+const ADMIN_SALT = "pkm_admin_salt_2026_";
+
+function calcSha256(ascii) {
+  function rightRotate(value, amount) {
+    return (value >>> amount) | (value << (32 - amount));
+  }
+  var mathPow = Math.pow;
+  var maxWord = mathPow(2, 32);
+  var lengthProperty = "length";
+  var i, j;
+  var result = "";
+  var words = [];
+  var asciiBitLength = ascii[lengthProperty] * 8;
+  var hash = calcSha256.h = calcSha256.h || [];
+  var k = calcSha256.k = calcSha256.k || [];
+  var primeCounter = k[lengthProperty];
+  var isComposite = {};
+  for (var candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i = 0; i < 313; i += candidate) {
+        isComposite[i] = candidate;
+      }
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  ascii += "\x80";
+  while ((ascii[lengthProperty] % 64) - 56) ascii += "\x00";
+  for (i = 0; i < ascii[lengthProperty]; i++) {
+    j = ascii.charCodeAt(i);
+    if (j >> 8) return "";
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words[lengthProperty]] = (asciiBitLength / maxWord) | 0;
+  words[words[lengthProperty]] = asciiBitLength;
+  for (j = 0; j < words[lengthProperty];) {
+    var w = words.slice(j, j += 16);
+    var oldHash = hash.slice(0);
+    hash = hash.slice(0, 8);
+    for (i = 0; i < 64; i++) {
+      var i2 = i + j;
+      var w15 = w[i - 15], w2 = w[i - 2];
+      var a = hash[0], e = hash[4];
+      var temp1 = hash[7]
+        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+        + ((e & hash[5]) ^ ((~e) & hash[6]))
+        + k[i]
+        + (w[i] = (i < 16) ? w[i] : (
+            w[i - 16]
+            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+            + w[i - 7]
+            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+          ) | 0
+        );
+      var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+    }
+    for (i = 0; i < 8; i++) {
+      hash[i] = (hash[i] + oldHash[i]) | 0;
+    }
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j + 1; j--) {
+      var b = (hash[i] >> (j * 8)) & 255;
+      result += ((b < 16) ? "0" : "") + b.toString(16);
+    }
+  }
+  return result;
+}
+
+function verifyAdminPassword(pwd) {
+  if (ADMIN_RAW_PASSWORD && pwd === ADMIN_RAW_PASSWORD) return true;
+  return calcSha256(ADMIN_SALT + pwd) === ADMIN_PASSWORD_HASH;
+}
+
+function getActivePin() {
+  return localStorage.getItem("pkm_public_pin") || DEFAULT_ACCESS_PIN;
+}
+
+function getPublicPinEpoch() {
+  return Number(localStorage.getItem("pkm_public_pin_epoch") || "0");
+}
+
+function isPublicSessionValid() {
+  try {
+    const sessionTime = Number(localStorage.getItem(PUBLIC_AUTH_SESSION_KEY) || "0");
+    const sessionEpoch = Number(localStorage.getItem(PUBLIC_AUTH_EPOCH_KEY) || "0");
+    const currentEpoch = getPublicPinEpoch();
+    
+    // Revoke access immediately if PIN was updated after this session was granted
+    if (sessionEpoch < currentEpoch) {
+      clearPublicSession();
+      return false;
+    }
+    if (sessionTime && (Date.now() - sessionTime) < PUBLIC_AUTH_DURATION_MS) {
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function savePublicSession() {
+  try {
+    localStorage.setItem(PUBLIC_AUTH_SESSION_KEY, String(Date.now()));
+    localStorage.setItem(PUBLIC_AUTH_EPOCH_KEY, String(getPublicPinEpoch()));
+  } catch (e) {}
+}
+
+function clearPublicSession() {
+  try {
+    localStorage.removeItem(PUBLIC_AUTH_SESSION_KEY);
+    localStorage.removeItem(PUBLIC_AUTH_EPOCH_KEY);
+  } catch (e) {}
+}
 
 let enteredPin = "";
 const pinOverlay = document.getElementById("pin-overlay");
 const pinBox = document.getElementById("pin-box");
 const pinStatus = document.getElementById("pin-status");
+const hiddenInput = document.getElementById("pin-hidden-input");
 const cells = [
   document.getElementById("dot-0"),
   document.getElementById("dot-1"),
@@ -1129,11 +1474,23 @@ const cells = [
   document.getElementById("dot-3")
 ];
 
+// Check 6-hour auth session
+if (isPublicSessionValid()) {
+  if (pinOverlay) {
+    pinOverlay.style.display = "none";
+  }
+}
+
 function updateCells() {
   for (let i = 0; i < 4; i++) {
-    cells[i].classList.toggle("filled", i < enteredPin.length);
-    cells[i].classList.remove("error");
-    cells[i].textContent = i < enteredPin.length ? "●" : "";
+    if (cells[i]) {
+      cells[i].classList.toggle("filled", i < enteredPin.length);
+      cells[i].classList.remove("error");
+      cells[i].textContent = i < enteredPin.length ? "●" : "";
+    }
+  }
+  if (hiddenInput && hiddenInput.value !== enteredPin) {
+    hiddenInput.value = enteredPin;
   }
 }
 
@@ -1164,22 +1521,30 @@ function handleClear() {
 }
 
 function verifyCode() {
-  if (enteredPin === ACCESS_PIN) {
+  const activeExpected = getActivePin();
+  if (enteredPin === activeExpected) {
+    savePublicSession(); // Save session for 6 hours!
     pinStatus.textContent = "✓ PIN verified! Unlocking...";
     pinStatus.className = "pin-info";
-    pinStatus.style.color = "var(--success)";
-    cells.forEach(c => { c.style.borderColor = "var(--success)"; c.style.color = "var(--success)"; });
+    pinStatus.style.color = "var(--accent)";
+    cells.forEach(c => { 
+      if (c) {
+        c.style.borderColor = "var(--accent)"; 
+        c.style.color = "var(--accent)"; 
+      }
+    });
     setTimeout(() => {
       pinOverlay.style.opacity = "0";
       pinOverlay.style.transition = "opacity 0.22s ease-out";
       setTimeout(() => {
         pinOverlay.style.display = "none";
-        document.getElementById("q").focus();
+        const qEl = document.getElementById("q");
+        if (qEl) qEl.focus();
       }, 220);
     }, 120);
   } else {
     pinBox.classList.add("shake");
-    cells.forEach(c => c.classList.add("error"));
+    cells.forEach(c => { if (c) c.classList.add("error"); });
     pinStatus.textContent = "✕ Incorrect PIN. Please try again.";
     pinStatus.className = "pin-info error";
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
@@ -1191,21 +1556,21 @@ function verifyCode() {
   }
 }
 
-// Keyboard input for PIN
+// Keyboard input for desktop
 window.addEventListener("keydown", (e) => {
-  if (pinOverlay.style.display === "none") return;
-  if (e.key >= "0" && e.key <= "9") {
-    handleDigit(e.key);
-  } else if (e.key === "Backspace") {
-    handleBack();
-  } else if (e.key === "Escape") {
-    handleClear();
-  }
+  if (pinOverlay && pinOverlay.style.display === "none") return;
+  const adminM = document.getElementById("admin-pin-modal");
+  if (adminM && adminM.style.display === "flex") return;
+  
+  if (e.key >= "0" && e.key <= "9") handleDigit(e.key);
+  else if (e.key === "Backspace") handleBack();
+  else if (e.key === "Escape") handleClear();
 });
 
-// Keypad button listeners
+// Keypad buttons
 document.querySelectorAll(".keypad button").forEach(btn => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
     const val = btn.dataset.val;
     const action = btn.dataset.action;
     if (val !== undefined) handleDigit(val);
@@ -1214,14 +1579,191 @@ document.querySelectorAll(".keypad button").forEach(btn => {
   });
 });
 
+// Mobile hidden input listener
+if (hiddenInput) {
+  hiddenInput.addEventListener("input", (e) => {
+    const val = hiddenInput.value.replace(/[^0-9]/g, "").slice(0, 4);
+    enteredPin = val;
+    updateCells();
+    if (enteredPin.length === 4) {
+      setTimeout(verifyCode, 60);
+    }
+  });
+}
+
+const pinDisplayWrap = document.getElementById("pin-display-wrap");
+if (pinDisplayWrap && hiddenInput) {
+  pinDisplayWrap.addEventListener("click", () => hiddenInput.focus());
+}
+
+// Lock portal button
+const lockBtn = document.getElementById("header-lock-btn");
+if (lockBtn) {
+  lockBtn.addEventListener("click", () => {
+    if (confirm("Lock portal now? You will need to enter the 4-digit PIN again.")) {
+      clearPublicSession();
+      location.reload();
+    }
+  });
+}
+
 // ========================================================
-// 2. DATA PROCESSING & SEARCH ENGINE
+// 2. ADMIN PIN RESET CONTROLS & SESSION REVOCATION
+// ========================================================
+const adminPinModal = document.getElementById("admin-pin-modal");
+const openAdminPinModal = document.getElementById("open-admin-pin-modal");
+const headerAdminPinBtn = document.getElementById("header-admin-pin-btn");
+const closeAdminPinBtn = document.getElementById("close-admin-pin-btn");
+const closeAdminPinX = document.getElementById("close-admin-pin-x");
+const saveNewPinBtn = document.getElementById("save-new-pin-btn");
+const adminPwdInput = document.getElementById("admin-password-input");
+const newPinInput = document.getElementById("new-pin-input");
+const confirmPinInput = document.getElementById("confirm-pin-input");
+const adminPinMsg = document.getElementById("admin-pin-msg");
+
+function showAdminPinModal() {
+  adminPwdInput.value = "";
+  newPinInput.value = "";
+  confirmPinInput.value = "";
+  adminPinMsg.style.display = "none";
+  adminPinModal.style.display = "flex";
+  adminPwdInput.focus();
+}
+
+function hideAdminPinModal() {
+  adminPinModal.style.display = "none";
+}
+
+if (openAdminPinModal) openAdminPinModal.addEventListener("click", showAdminPinModal);
+if (headerAdminPinBtn) headerAdminPinBtn.addEventListener("click", showAdminPinModal);
+if (closeAdminPinBtn) closeAdminPinBtn.addEventListener("click", hideAdminPinModal);
+if (closeAdminPinX) closeAdminPinX.addEventListener("click", hideAdminPinModal);
+if (adminPinModal) {
+  adminPinModal.addEventListener("click", (e) => {
+    if (e.target === adminPinModal) hideAdminPinModal();
+  });
+}
+
+function showAdminMsg(type, text) {
+  adminPinMsg.style.display = "block";
+  if (type === "error") {
+    adminPinMsg.style.background = "#fee2e2";
+    adminPinMsg.style.color = "#dc2626";
+    adminPinMsg.style.border = "1px solid #fecaca";
+  } else {
+    adminPinMsg.style.background = "#ecfdf5";
+    adminPinMsg.style.color = "#065f46";
+    adminPinMsg.style.border = "1px solid #a7f3d0";
+  }
+  adminPinMsg.innerHTML = text;
+}
+
+if (saveNewPinBtn) {
+  saveNewPinBtn.addEventListener("click", () => {
+    const pwd = adminPwdInput.value;
+    const p1 = newPinInput.value.trim();
+    const p2 = confirmPinInput.value.trim();
+
+    if (!pwd) {
+      showAdminMsg("error", "Please enter the admin password.");
+      adminPwdInput.focus();
+      return;
+    }
+
+    if (!verifyAdminPassword(pwd)) {
+      showAdminMsg("error", "✕ Incorrect admin password. Access denied.");
+      adminPwdInput.value = "";
+      adminPwdInput.focus();
+      return;
+    }
+
+    if (!/^[0-9]{4}$/.test(p1)) {
+      showAdminMsg("error", "New PIN must be exactly 4 digits (0-9).");
+      newPinInput.focus();
+      return;
+    }
+
+    if (p1 !== p2) {
+      showAdminMsg("error", "New PIN and Confirm PIN do not match.");
+      confirmPinInput.focus();
+      return;
+    }
+
+    // Update PIN & generate new epoch
+    const newEpoch = Date.now();
+    localStorage.setItem("pkm_public_pin", p1);
+    localStorage.setItem("pkm_public_pin_epoch", String(newEpoch));
+    clearPublicSession(); // Revoke all active sessions!
+
+    // Broadcast to Firebase so all devices immediately lose access
+    const dbUrl = localStorage.getItem("pkm_cloud_db_url");
+    if (dbUrl && window.firebase) {
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp({ databaseURL: dbUrl });
+        }
+        firebase.database().ref("config/public_pin").set({
+          pin: p1,
+          epoch: newEpoch,
+          updatedAt: new Date().toISOString()
+        }).catch(e => console.warn("Firebase pin sync:", e));
+      } catch (e) {}
+    }
+
+    showAdminMsg("success", "✓ PIN successfully updated! All active sessions have been revoked. Please enter the new PIN.");
+    setTimeout(() => {
+      hideAdminPinModal();
+      if (pinOverlay) {
+        pinOverlay.style.display = "flex";
+        pinOverlay.style.opacity = "1";
+        enteredPin = "";
+        updateCells();
+        pinStatus.textContent = "✓ PIN updated! Enter new 4-digit PIN.";
+        pinStatus.className = "pin-info";
+        pinStatus.style.color = "var(--accent)";
+      }
+    }, 1000);
+  });
+}
+
+// Listen to Firebase for remote PIN resets if database URL is configured
+(function initPublicPinSync() {
+  const dbUrl = localStorage.getItem("pkm_cloud_db_url");
+  if (dbUrl && window.firebase) {
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp({ databaseURL: dbUrl });
+      }
+      firebase.database().ref("config/public_pin").on("value", (snapshot) => {
+        const cfg = snapshot.val();
+        if (cfg && cfg.epoch) {
+          const localEpoch = getPublicPinEpoch();
+          if (cfg.epoch > localEpoch) {
+            localStorage.setItem("pkm_public_pin", cfg.pin);
+            localStorage.setItem("pkm_public_pin_epoch", String(cfg.epoch));
+            clearPublicSession();
+            if (pinOverlay) {
+              pinOverlay.style.display = "flex";
+              pinOverlay.style.opacity = "1";
+              enteredPin = "";
+              updateCells();
+              pinStatus.textContent = "⚠️ PIN reset by Admin. Enter new PIN.";
+              pinStatus.className = "pin-info error";
+            }
+          }
+        }
+      });
+    } catch (e) {}
+  }
+})();
+
+// ========================================================
+// 3. DATA PROCESSING & SEARCH ENGINE
 // ========================================================
 const COLS = ["ward","serial","part_ref","name","name_te","rel_type","rel_name","rel_name_te","age","gender","house","epic","page","review"];
 const RAW = JSON.parse(document.getElementById("voters").textContent);
 const V = RAW.map(a => Object.fromEntries(COLS.map((c, i) => [c, a[i]])));
 
-// Phonetic search normalizer: handles spelling variations (Siva/Shiva, Laxmi/Lakshmi, Kolla/Kola, Prasad/Prasadh)
 function pk(s) {
   return (s || "").toLowerCase().replace(/[^a-z0-9\s]/g, "")
     .replace(/x/g, "ksh").replace(/w/g, "v").replace(/z/g, "j").replace(/ph/g, "f")
@@ -1231,58 +1773,104 @@ function pk(s) {
 function words(s) {
   const w = pk(s).split(/\s+/).filter(Boolean);
   const out = w.slice();
-  for (let i = 0; i + 1 < w.length; i++) out.push(w[i] + w[i + 1]);
+  for (let i = 0; i < w.length; i++) {
+    for (let j = i + 1; j < w.length; j++) {
+      out.push(w[i] + w[j]);
+    }
+  }
   return out;
 }
 
+const TELUGU_RE = /[\u0c00-\u0c7f]/;
+
 V.forEach(v => {
-  v._nw = words(v.name);
-  v._rw = words(v.rel_name);
-  v._te = ((v.name_te || "") + " " + (v.rel_name_te || "")).replace(/\s+/g, "");
-  v._id = (v.epic || "").toLowerCase();
-  v._h = (v.house || "").toLowerCase().replace(/\s+/g, "");
+  v._wn = words(v.name);
+  v._wr = words(v.rel_name);
+  v._allW = v._wn.concat(v._wr);
+  v._te = ((v.name_te || "") + " " + (v.rel_name_te || "")).toLowerCase();
+  v._epic = (v.epic || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  v._h = (v.house || "").trim().toLowerCase();
 });
 
-const $ = id => document.getElementById(id);
-let ward = "", house = null, shown = 60;
-const REL_MAP = { Father: "Father", Husband: "Husband", Mother: "Mother", Other: "Relation" };
+const REL_MAP = {
+  Father: "తండ్రి (Father)", Husband: "భర్త (Husband)",
+  Mother: "తల్లి (Mother)", Other: "ఇతర (Other)"
+};
 
-function wardsUI() {
-  const counts = {};
-  V.forEach(v => counts[v.ward] = (counts[v.ward] || 0) + 1);
-  const ws = Object.keys(counts).map(Number).sort((a, b) => a - b);
-  const mk = (w, label, n) => `<button class="ward-btn" data-w="${w}" aria-pressed="${String(w) === ward}"><b>${label}</b><span class="count-tag">${n.toLocaleString("en-IN")}</span></button>`;
-  $("wards").innerHTML = mk("", "All Wards", V.length) + ws.map(w => mk(w, "Ward " + w, counts[w])).join("");
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
 }
 
-function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+const $ = id => document.getElementById(id);
+
+let ward = null, house = null, shown = 60;
+
+function wardsUI() {
+  document.querySelectorAll(".ward-btn").forEach(b => {
+    b.classList.toggle("active", (ward === null && b.dataset.w === "all") || (ward !== null && b.dataset.w === String(ward)));
+  });
+}
 
 function filter() {
-  const q = $("q").value.trim();
-  const g = $("gender").value, ag = $("age").value, rv = $("review").checked;
-  const [a0, a1] = ag ? ag.split("-").map(Number) : [0, 999];
-  const toks = q.split(/\s+/).filter(Boolean);
-  const isTe = /[\u0C00-\u0C7F]/.test(q);
+  const qRaw = $("q").value.trim();
+  const isTe = TELUGU_RE.test(qRaw);
+  const qTe = qRaw.toLowerCase();
+  const toks = isTe ? [] : pk(qRaw).split(/\s+/).filter(Boolean);
+  const qEpic = qRaw.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-  let out = V.filter(v => {
-    if (ward && String(v.ward) !== ward) return false;
-    if (house && (v.ward + "|" + v._h) !== house.key) return false;
-    if (g && v.gender !== g) return false;
-    if (ag && !(v.age >= a0 && v.age <= a1)) return false;
-    if (rv && !(v.review && v.review.length)) return false;
-    if (!toks.length) return true;
-    if (isTe) return toks.every(t => v._te.includes(t));
-    return toks.every(t => {
-      const tl = t.toLowerCase();
-      if (/\d/.test(tl)) return v._id.includes(tl) || v._h.includes(tl) || String(v.serial) === tl;
-      const k = pk(tl);
-      return v._nw.some(w => w.startsWith(k)) || v._rw.some(w => w.startsWith(k)) || v._id.includes(tl);
-    });
-  });
-
-  if (toks.length && !isTe) out.forEach(v => v._own = toks.every(t => /\d/.test(t) || v._nw.some(w => w.startsWith(pk(t)))) ? 0 : 1);
+  const g = $("gender").value;
+  const a = $("age").value;
   const s = $("sort").value;
-  if (s === "name") out.sort((a, b) => a.name.localeCompare(b.name));
+  
+
+  const out = [];
+
+  for (let i = 0; i < V.length; i++) {
+    const v = V[i];
+    if (ward !== null && v.ward !== Number(ward)) continue;
+    if (house && (v.ward + "|" + v._h) !== house.key) continue;
+    if (g && v.gender !== g) continue;
+    
+
+    if (a) {
+      const age = v.age;
+      if (age === null || age === undefined) continue;
+      if (a === "18-25" && (age < 18 || age > 25)) continue;
+      if (a === "26-40" && (age < 26 || age > 40)) continue;
+      if (a === "41-60" && (age < 41 || age > 60)) continue;
+      if (a === "61-200" && age < 61) continue;
+    }
+
+    if (qRaw) {
+      if (qEpic.length >= 3 && v._epic.includes(qEpic)) {
+        v._own = 1; out.push(v); continue;
+      }
+      if (isTe) {
+        if (!v._te.includes(qTe)) continue;
+        v._own = 0; out.push(v); continue;
+      }
+      let match = true;
+      let ownNameScore = 0;
+      for (let t = 0; t < toks.length; t++) {
+        const tok = toks[t];
+        const inOwn = v._wn.some(w => w.includes(tok));
+        const inAny = inOwn || v._allW.some(w => w.includes(tok));
+        if (!inAny) { match = false; break; }
+        if (inOwn) ownNameScore++;
+      }
+      if (!match) continue;
+      v._own = -ownNameScore;
+      out.push(v);
+    } else {
+      v._own = 0;
+      out.push(v);
+    }
+  }
+
+  if (s === "serial") out.sort((a, b) => a.serial - b.serial);
+  else if (s === "name") out.sort((a, b) => a.name.localeCompare(b.name));
   else if (s === "age") out.sort((a, b) => (a.age || 0) - (b.age || 0));
   else if (s === "house") out.sort((a, b) => a.ward - b.ward || a.house.localeCompare(b.house, undefined, { numeric: true }));
   else out.sort((a, b) => (toks.length && !isTe ? a._own - b._own : 0) || a.ward - b.ward || a.serial - b.serial);
@@ -1290,11 +1878,9 @@ function filter() {
 }
 
 function slip(v) {
-  const flag = v.review && v.review.length;
   const genderClass = v.gender === "F" ? "gender-female" : "gender-male";
   const genderLabel = v.gender === "F" ? "♀ Female" : v.gender === "M" ? "♂ Male" : "Other";
-  
-  return `<article class="voter-card${flag ? " flagged" : ""}">
+  return `<article class="voter-card">
     <div class="card-top">
       <span class="ward-sl-badge">Ward ${v.ward} · Sl ${v.serial}</span>
       <span class="ac-roll-badge">${v.part_ref ? "Roll " + esc(v.part_ref) : ""}</span>
@@ -1311,7 +1897,7 @@ function slip(v) {
     <div class="card-meta-row">
       <span class="meta-chip ${genderClass}">${genderLabel}</span>
       <span class="meta-chip age-chip">Age ${v.age ?? "?"}</span>
-      <button class="house-btn" data-h="${esc(v.ward + "|" + v._h)}" data-label="${esc(v.house)}" title="Show everyone at this house">
+      <button class="house-btn" data-h="${esc(v.ward + "|" + v._h)}" data-label="${esc(v.house)}" title="Filter all family members at this house">
         🏠 ${esc(v.house) || "?"}
       </button>
     </div>
@@ -1322,7 +1908,6 @@ function slip(v) {
       </div>
       <span class="roll-page">p.${v.page}</span>
     </div>
-    ${flag ? `<div class="flag-alert">Check roll: ${esc(v.review.join(", "))}</div>` : ""}
   </article>`;
 }
 
@@ -1335,7 +1920,7 @@ function render(reset) {
     (q ? ` matching “<b>${esc(q)}</b>”` : "") + (ward ? ` in <b>Ward ${ward}</b>` : "");
   $("housef").innerHTML = house ? `<span class="house-filter-badge">Door No. ${esc(house.label)}</span> · <button class="clear-house-btn" id="clearh">show all doors</button>` : "";
   $("list").innerHTML = out.length ? out.slice(0, shown).map(slip).join("") :
-    `<div class="empty-state">No voters found. Try fewer letters of the name, or search the door/EPIC number.</div>`;
+    `<div class="empty-state">No voters found matching your search.</div>`;
   $("more").hidden = out.length <= shown;
   $("more").textContent = `Show more voters (${(out.length - shown).toLocaleString("en-IN")} remaining)`;
 }
@@ -1343,17 +1928,19 @@ function render(reset) {
 let t;
 $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => render(true), 120); });
 $("clearq").addEventListener("click", () => { $("q").value = ""; $("clearq").style.display = "none"; $("q").focus(); render(true); });
-["gender", "age", "sort", "review"].forEach(id => $(id).addEventListener("change", () => render(true)));
+["gender", "age", "sort"].forEach(id => $(id).addEventListener("change", () => render(true)));
 $("wards").addEventListener("click", e => {
   const b = e.target.closest(".ward-btn"); if (!b) return;
   ward = b.dataset.w; house = null; wardsUI(); render(true);
 });
 $("more").addEventListener("click", () => { shown += 120; render(false); });
+
 document.addEventListener("click", e => {
   const h = e.target.closest(".house-btn");
   if (h) house = { key: h.dataset.h, label: h.dataset.label };
   if (e.target.id === "clearh") house = null;
   if (h || e.target.id === "clearh") { render(true); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  
   const c = e.target.closest(".copy-btn");
   if (c) {
     const done = () => { c.textContent = "Copied!"; setTimeout(() => c.textContent = "Copy", 1200); };
@@ -1363,7 +1950,9 @@ document.addEventListener("click", e => {
     });
   }
 });
-wardsUI(); render(true);
+
+wardsUI();
+render(true);
 </script>
 </body>
 </html>
