@@ -552,12 +552,7 @@ select.ctrl-select, .ctrl-btn {
   color: var(--primary);
 }
 
-#marker-filter {
-  font-weight: 700;
-  border-color: var(--accent);
-  background: var(--accent-light);
-  color: #0f4c81;
-}
+
 
 /* Cloud DB Modal */
 
@@ -735,34 +730,68 @@ main.app-main .wrap {
 
 .metric-card {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 2px solid var(--line);
   border-radius: 12px;
-  padding: 8px 12px;
+  padding: 9px 12px;
   display: flex;
   align-items: center;
   gap: 8px;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: all 0.15s ease;
+  user-select: none;
+  position: relative;
+  opacity: 0.65;
 }
 
 .metric-card:hover {
   transform: translateY(-1px);
+  opacity: 0.9;
 }
 
-.metric-card.sure-card {
-  border-color: var(--sure-border);
-  background: var(--sure-bg);
+.metric-card.active {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.metric-card.doubt-card {
-  border-color: var(--doubt-border);
-  background: var(--doubt-bg);
+.metric-card[data-filter="all"].active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 4px 12px rgba(15, 76, 129, 0.18);
 }
 
-.metric-card.empty-card {
-  border-color: var(--empty-border);
-  background: var(--empty-bg);
+.metric-card.sure-card.active {
+  border-color: #10b981;
+  background: #ecfdf5;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.metric-card.doubt-card.active {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.metric-card.empty-card.active {
+  border-color: #64748b;
+  background: #f1f5f9;
+  box-shadow: 0 4px 12px rgba(100, 116, 139, 0.2);
+}
+
+.metric-card .filter-check-badge {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--muted);
+  display: none;
+}
+
+.metric-card.active .filter-check-badge {
+  display: inline-block;
+  color: currentColor;
 }
 
 .metric-icon {
@@ -912,8 +941,8 @@ main.app-main .wrap {
 /* 3-State Voter Party Marker Selector */
 .marker-selector-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 5px;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
   background: var(--bg);
   padding: 4px;
   border-radius: 8px;
@@ -1307,14 +1336,7 @@ footer.app-footer {
 
     <!-- Filters Bar Including Party Status Filter -->
     <div class="controls-bar">
-      <!-- Marker / Party Vote Filter -->
-      <select id="marker-filter" class="ctrl-select" aria-label="Filter by Party Vote Status">
-        <option value="">All Statuses (1,274)</option>
-        <option value="sure">✓ Sure for Us (పక్కా)</option>
-        <option value="doubt">? Doubt / Lean (సందేహం)</option>
-        <option value="empty">○ Empty / Won't Vote</option>
-        <option value="marked">★ Marked Only (Sure + Doubt)</option>
-      </select>
+      
 
       <select id="gender" class="ctrl-select" aria-label="Gender Filter">
         <option value="">All Genders</option>
@@ -1351,34 +1373,38 @@ footer.app-footer {
 <main class="app-main">
   <div class="wrap">
     <!-- Live Survey Metrics Dashboard -->
-    <div class="metrics-strip">
-      <div class="metric-card" data-filter="">
+    <div class="metrics-strip" id="metrics-filter-strip">
+      <div class="metric-card active" data-filter="all" title="Click to view all voters">
         <span class="metric-icon">👥</span>
         <div class="metric-info">
           <span class="metric-val" id="metric-total">1,274</span>
           <span class="metric-lbl">Total Voters</span>
         </div>
+        <span class="filter-check-badge">✓</span>
       </div>
-      <div class="metric-card sure-card" data-filter="sure">
+      <div class="metric-card sure-card" data-filter="sure" title="Click to filter voters marked Sure">
         <span class="metric-icon">🟢</span>
         <div class="metric-info">
           <span class="metric-val" id="metric-sure">0</span>
           <span class="metric-lbl">Sure (పక్కా)</span>
         </div>
+        <span class="filter-check-badge">✓</span>
       </div>
-      <div class="metric-card doubt-card" data-filter="doubt">
+      <div class="metric-card doubt-card" data-filter="doubt" title="Click to filter voters marked Doubt">
         <span class="metric-icon">🟡</span>
         <div class="metric-info">
           <span class="metric-val" id="metric-doubt">0</span>
           <span class="metric-lbl">Doubt (సందేహం)</span>
         </div>
+        <span class="filter-check-badge">✓</span>
       </div>
-      <div class="metric-card empty-card" data-filter="empty">
+      <div class="metric-card empty-card" data-filter="empty" title="Click to filter voters not yet marked / Others">
         <span class="metric-icon">⚪</span>
         <div class="metric-info">
           <span class="metric-val" id="metric-empty">1,274</span>
-          <span class="metric-lbl">Empty / Other</span>
+          <span class="metric-lbl">Others (ఇతరులు)</span>
         </div>
+        <span class="filter-check-badge">✓</span>
       </div>
     </div>
 
@@ -2003,10 +2029,7 @@ async function connectCloudSync(dbUrl) {
       saveLocalMarks(MARKS);
       updateMetrics();
       refreshVisibleCards();
-      const mf = document.getElementById("marker-filter");
-      if (mf && mf.value !== "all") {
-        render(false);
-      }
+      if (!activeStatusFilters.has("all")) { render(false); }
       updateSyncUI("online", "Live Cloud Sync", dbUrl);
     }, (error) => {
       handleSyncError(error, dbUrl);
@@ -2169,6 +2192,66 @@ function refreshVisibleCards() {
   });
 }
 
+// Multi-Select Status Filters from Metric Cards
+let activeStatusFilters = new Set(["all"]);
+
+function updateMetricCardsUI() {
+  document.querySelectorAll(".metric-card").forEach(card => {
+    const f = card.dataset.filter;
+    card.classList.toggle("active", activeStatusFilters.has(f));
+  });
+}
+
+function initMetricCardFilters() {
+  const strip = document.getElementById("metrics-filter-strip");
+  if (!strip) return;
+  
+  strip.addEventListener("click", (e) => {
+    const card = e.target.closest(".metric-card");
+    if (!card) return;
+    
+    const f = card.dataset.filter;
+    if (f === "all") {
+      // Total voters selected: exclusively select "all"
+      activeStatusFilters.clear();
+      activeStatusFilters.add("all");
+    } else {
+      // Sure, Doubt, or Others clicked
+      activeStatusFilters.delete("all");
+      
+      if (activeStatusFilters.has(f)) {
+        activeStatusFilters.delete(f);
+      } else {
+        activeStatusFilters.add(f);
+      }
+      
+      // If all 3 are deselected, default back to "all"
+      if (activeStatusFilters.size === 0) {
+        activeStatusFilters.add("all");
+      }
+    }
+    
+    updateMetricCardsUI();
+    render(true);
+  });
+}
+
+// Toggle Voter Mark: tapping same button toggles off (returns to empty/others)
+function toggleVoterMark(serial, clickedMark) {
+  const currentMark = MARKS[serial] || "empty";
+  let nextMark = "empty";
+  
+  if (currentMark === clickedMark) {
+    // Tapped the active mark again -> unselect (map back to empty)
+    nextMark = "empty";
+  } else {
+    // Tapped another mark -> switch to clickedMark
+    nextMark = clickedMark;
+  }
+  
+  setVoterMark(serial, nextMark);
+}
+
 function setVoterMark(serial, mark) {
   if (!mark || mark === "empty") {
     delete MARKS[serial];
@@ -2185,8 +2268,9 @@ function setVoterMark(serial, mark) {
   saveLocalMarks(MARKS);
   updateMetrics();
   refreshVisibleCards();
-  const mf = document.getElementById("marker-filter");
-  if (mf && mf.value !== "all") {
+  
+  // Re-render if filtering by status
+  if (!activeStatusFilters.has("all")) {
     render(false);
   }
 }
@@ -2298,7 +2382,6 @@ function filter() {
   const g = $("gender").value;
   const a = $("age").value;
   const s = $("sort").value;
-  const mf = $("marker-filter").value;
 
   const out = [];
 
@@ -2317,12 +2400,12 @@ function filter() {
       if (a === "61+" && age < 61) continue;
     }
 
-    if (mf !== "all") {
+    // Status filter driven by Metric Cards (Sure / Doubt / Others combination)
+    if (!activeStatusFilters.has("all")) {
       const curMark = MARKS[v.serial] || "empty";
-      if (mf === "sure" && curMark !== "sure") continue;
-      if (mf === "doubt" && curMark !== "doubt") continue;
-      if (mf === "empty" && curMark !== "empty") continue;
-      if (mf === "marked" && curMark === "empty") continue;
+      if (!activeStatusFilters.has(curMark)) {
+        continue;
+      }
     }
 
     if (qRaw) {
@@ -2371,16 +2454,13 @@ function slip(v) {
       <span class="ac-roll-badge">${v.part_ref ? "Roll " + esc(v.part_ref) : ""}</span>
     </div>
 
-    <!-- Survey Marker Selector -->
+    <!-- Survey Marker Selector (Tap to toggle Sure/Doubt; unselect returns to Others) -->
     <div class="marker-selector-row">
       <button class="mark-btn btn-sure${mark === "sure" ? " active" : ""}" data-mark="sure" data-serial="${v.serial}">
         ✓ Sure / పక్కా
       </button>
       <button class="mark-btn btn-doubt${mark === "doubt" ? " active" : ""}" data-mark="doubt" data-serial="${v.serial}">
         ? Doubt / డౌట్
-      </button>
-      <button class="mark-btn btn-empty${mark === "empty" ? " active" : ""}" data-mark="empty" data-serial="${v.serial}">
-        ○ Empty
       </button>
     </div>
 
@@ -2416,7 +2496,8 @@ function render(reset) {
   const q = $("q").value.trim();
   $("clearq").style.display = q ? "flex" : "none";
   $("count").innerHTML = `<b>${out.length.toLocaleString("en-IN")}</b> voter${out.length === 1 ? "" : "s"}` +
-    (q ? ` matching “<b>${esc(q)}</b>”` : "") + (ward ? ` in <b>Ward ${ward}</b>` : "");
+    (q ? ` matching “<b>${esc(q)}</b>”` : "") + (ward ? ` in <b>Ward ${ward}</b>` : "") +
+    (!activeStatusFilters.has("all") ? ` · Filtered by: <b>${Array.from(activeStatusFilters).map(f => f === "sure" ? "Sure" : f === "doubt" ? "Doubt" : "Others").join(" + ")}</b>` : "");
   $("housef").innerHTML = house ? `<span class="house-filter-badge">Door No. ${esc(house.label)}</span> · <button class="clear-house-btn" id="clearh">show all doors</button>` : "";
   $("list").innerHTML = out.length ? out.slice(0, shown).map(slip).join("") :
     `<div class="empty-state">No voters found with current filters.</div>`;
@@ -2427,7 +2508,7 @@ function render(reset) {
 let t;
 $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => render(true), 120); });
 $("clearq").addEventListener("click", () => { $("q").value = ""; $("clearq").style.display = "none"; $("q").focus(); render(true); });
-["gender", "age", "sort", "marker-filter"].forEach(id => $(id).addEventListener("change", () => render(true)));
+["gender", "age", "sort"].forEach(id => $(id).addEventListener("change", () => render(true)));
 $("wards").addEventListener("click", e => {
   const b = e.target.closest(".ward-btn"); if (!b) return;
   ward = b.dataset.w; house = null; wardsUI(); render(true);
@@ -2439,7 +2520,7 @@ document.addEventListener("click", e => {
   if (mb) {
     const s = mb.dataset.serial;
     const m = mb.dataset.mark;
-    setVoterMark(s, m);
+    toggleVoterMark(s, m);
     return;
   }
 
@@ -2461,6 +2542,7 @@ document.addEventListener("click", e => {
 wardsUI();
 updateMetrics();
 render(true);
+initMetricCardFilters();
 initCloudSync();
 </script>
 </body>
