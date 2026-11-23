@@ -1128,7 +1128,7 @@ footer.app-footer {
       <button id="close-sync-x" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);padding:0 4px;line-height:1;" title="Close">✕</button>
     </div>
 
-    <div id="modal-status-banner" style="font-size:0.82rem;padding:8px 12px;border-radius:8px;font-weight:600;"></div>
+    <div id="modal-status-banner" style="font-size:0.82rem;border-radius:8px;font-weight:600;"></div>
     
     <div class="modal-field">
       <label for="firebase-url-input">Firebase Realtime Database URL</label>
@@ -1139,7 +1139,7 @@ footer.app-footer {
     </div>
 
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn-primary" id="save-sync-url-btn" style="flex:1;">Connect &amp; Sync</button>
+      <button class="btn-primary" id="save-sync-url-btn" style="flex:1;">Connect &amp; Verify</button>
       <button class="btn-secondary" id="disconnect-sync-btn" style="display:none;background:#fee2e2;color:#dc2626;border:1px solid #fecaca;">Disconnect</button>
     </div>
 
@@ -1238,6 +1238,7 @@ footer.app-footer {
       </select>
 
       <!-- Cloud Sync & Backup Buttons -->
+      <button class="ctrl-btn" id="lock-portal-btn" title="Lock Portal with PIN">🔒 Lock</button>
       <button class="ctrl-btn" id="open-sync-btn" title="Configure Cloud Sync">☁️ Cloud Sync</button>
       <button class="ctrl-btn" id="export-btn" title="Backup or Export Survey Data">📥 Export</button>
       <button class="ctrl-btn" id="import-btn" title="Import / Merge Survey Data">📤 Import</button>
@@ -1308,11 +1309,34 @@ footer.app-footer {
 
 <script>
 // ========================================================
-// 1. PURE JS SHA-256 HASH & SECRET AUTHENTICATION
-// Works in ALL environments (file://, http://, https://, webview, mobile)
+// 1. PURE JS SHA-256 HASH & 6-HOUR SESSION AUTHENTICATION
 // ========================================================
 const AUTH_HASH = "3ca7484c045ed4e8ff7fef5b9ce6b63781ee1cba4742779a42968d576d8f9eb8";
 const AUTH_SALT = "pkm_survey_2026_";
+const AUTH_DURATION_MS = 6 * 60 * 60 * 1000; // 6 hours
+const AUTH_SESSION_KEY = "pkm_survey_auth_session";
+
+function isAuthSessionValid() {
+  try {
+    const t = localStorage.getItem(AUTH_SESSION_KEY);
+    if (t && (Date.now() - Number(t)) < AUTH_DURATION_MS) {
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function saveAuthSession() {
+  try {
+    localStorage.setItem(AUTH_SESSION_KEY, String(Date.now()));
+  } catch (e) {}
+}
+
+function clearAuthSession() {
+  try {
+    localStorage.removeItem(AUTH_SESSION_KEY);
+  } catch (e) {}
+}
 
 function calcSha256(ascii) {
   function rightRotate(value, amount) {
@@ -1396,6 +1420,13 @@ const cells = [
   document.getElementById("dot-3")
 ];
 
+// Check existing 6-hour auth session
+if (isAuthSessionValid()) {
+  if (pinOverlay) {
+    pinOverlay.style.display = "none";
+  }
+}
+
 function updateCells() {
   for (let i = 0; i < 4; i++) {
     if (cells[i]) {
@@ -1439,6 +1470,7 @@ function verifySecretCode() {
   const hashHex = calcSha256(AUTH_SALT + enteredPin);
   
   if (hashHex === AUTH_HASH) {
+    saveAuthSession(); // Remember login for 6 hours!
     pinStatus.textContent = "✓ Authorized! Loading portal...";
     pinStatus.className = "pin-info";
     pinStatus.style.color = "var(--sure-color)";
@@ -1512,6 +1544,17 @@ if (pinDisplayWrap && hiddenInput) {
   pinDisplayWrap.addEventListener("click", () => hiddenInput.focus());
 }
 
+// Manual lock portal button
+const lockBtn = document.getElementById("lock-portal-btn");
+if (lockBtn) {
+  lockBtn.addEventListener("click", () => {
+    if (confirm("Lock portal now? You will need to enter the 4-digit PIN again.")) {
+      clearAuthSession();
+      location.reload();
+    }
+  });
+}
+
 // ========================================================
 // 2. LIVE CLOUD REALTIME DATABASE SYNC ENGINE
 // ========================================================
@@ -1553,51 +1596,87 @@ const modalStatusBanner = document.getElementById("modal-status-banner");
 const shareLinkBox = document.getElementById("share-link-box");
 const disconnectBtn = document.getElementById("disconnect-sync-btn");
 
-function updateSyncUI(status, message) {
+function getRulesConsoleUrl(dbUrl) {
+  let url = "https://console.firebase.google.com/";
+  if (dbUrl) {
+    const match = dbUrl.match(/https:\/\/([a-zA-Z0-9-]+)\.(firebaseio|firebasedatabase)/);
+    if (match && match[1]) {
+      const rawProject = match[1].replace("-default-rtdb", "");
+      url = "https://console.firebase.google.com/project/" + rawProject + "/database/" + match[1] + "/rules";
+    }
+  }
+  return url;
+}
+
+function updateSyncUI(status, message, dbUrl) {
   if (syncStatusEl) {
     syncStatusEl.className = "sync-indicator " + (status === "online" ? "online" : "offline");
     syncTextEl.textContent = message;
   }
   if (modalStatusBanner) {
     if (status === "online") {
+      modalStatusBanner.style.padding = "10px 12px";
       modalStatusBanner.style.background = "#ecfdf5";
       modalStatusBanner.style.color = "#065f46";
       modalStatusBanner.style.border = "1px solid #a7f3d0";
-      modalStatusBanner.innerHTML = "🟢 <b>Live Cloud Sync Active</b> · All marks update across all phones automatically in real time.";
+      modalStatusBanner.innerHTML = "🟢 <b>Live Cloud Sync Active</b> · All voter marks update across all phones in real time.";
       if (shareLinkBox) shareLinkBox.style.display = "block";
       if (disconnectBtn) disconnectBtn.style.display = "inline-block";
     } else if (status === "connecting") {
+      modalStatusBanner.style.padding = "10px 12px";
       modalStatusBanner.style.background = "#fffbeb";
       modalStatusBanner.style.color = "#92400e";
       modalStatusBanner.style.border = "1px solid #fde68a";
-      modalStatusBanner.innerHTML = "🔄 <b>Connecting to Cloud Database...</b>";
+      modalStatusBanner.innerHTML = "🔄 <b>Connecting &amp; Testing Database Permissions...</b>";
       if (shareLinkBox) shareLinkBox.style.display = "none";
       if (disconnectBtn) disconnectBtn.style.display = "inline-block";
     } else if (status === "permission_denied") {
+      const rulesLink = getRulesConsoleUrl(dbUrl || getFirebaseUrl());
+      modalStatusBanner.style.padding = "12px";
       modalStatusBanner.style.background = "#fffbeb";
       modalStatusBanner.style.color = "#92400e";
       modalStatusBanner.style.border = "1.5px solid #f59e0b";
-      modalStatusBanner.innerHTML = `<div style="font-weight:700;font-size:0.92rem;margin-bottom:6px;">⚠️ Firebase Database Rules are Locked</div>
-<div style="font-size:0.8rem;line-height:1.4;margin-bottom:8px;">
-  Firebase is blocking access because your database security rules are in locked mode.
+      modalStatusBanner.innerHTML = `<div style="font-weight:800;font-size:0.95rem;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+  <span>⚠️ Firebase Rules Locked (Permission Denied)</span>
 </div>
-<div style="font-weight:700;font-size:0.8rem;margin-bottom:4px;">How to fix in 15 seconds:</div>
-<ol style="margin:0 0 8px 18px;padding:0;font-size:0.79rem;line-height:1.5;">
-  <li>In Firebase Console, go to your database and click the <b>Rules</b> tab (next to Data).</li>
-  <li>Replace the rules with:</li>
-</ol>
+<div style="font-size:0.82rem;line-height:1.45;margin-bottom:10px;">
+  Your database was reached, but Firebase is blocking access because security rules are set to private.
+</div>
+
+<div style="margin-bottom:10px;">
+  <a href="${rulesLink}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#f59e0b;color:#ffffff;text-decoration:none;padding:8px 14px;border-radius:8px;font-size:0.83rem;font-weight:700;">
+    👉 Open Rules Tab in Firebase Console ↗
+  </a>
+</div>
+
+<div style="font-size:0.8rem;font-weight:700;margin-bottom:4px;">In that Rules tab, paste this:</div>
 <pre style="background:#ffffff;border:1px solid #fde68a;padding:8px;border-radius:6px;font-family:monospace;font-size:0.82rem;margin:0 0 8px 0;user-select:all;">{
   "rules": {
     ".read": true,
     ".write": true
   }
 }</pre>
-<div style="font-size:0.79rem;">
-  3. Click the blue <b>Publish</b> button at the top right, then refresh this page!
-</div>`;
+<div style="font-size:0.79rem;margin-bottom:12px;">
+  Click the blue <b>Publish</b> button at top right in Firebase.
+</div>
+
+<button class="btn-primary" id="recheck-rules-btn" style="background:#10b981;width:100%;font-size:0.85rem;padding:10px;border:none;">
+  🔄 Re-check Connection Now
+</button>`;
+      
+      setTimeout(() => {
+        const rc = document.getElementById("recheck-rules-btn");
+        if (rc) {
+          rc.addEventListener("click", () => {
+            connectCloudSync(getFirebaseUrl());
+          });
+        }
+      }, 50);
+
       if (shareLinkBox) shareLinkBox.style.display = "none";
       if (disconnectBtn) disconnectBtn.style.display = "inline-block";
     } else {
+      modalStatusBanner.style.padding = "10px 12px";
       modalStatusBanner.style.background = "#f1f5f9";
       modalStatusBanner.style.color = "#475569";
       modalStatusBanner.style.border = "1px solid #cbd5e1";
@@ -1608,46 +1687,31 @@ function updateSyncUI(status, message) {
   }
 }
 
-function initCloudSync() {
-  const dbUrl = getFirebaseUrl();
+async function connectCloudSync(dbUrl) {
   if (!dbUrl || !window.firebase) {
     updateSyncUI("offline", "Local Only (Offline)");
     return;
   }
 
-  updateSyncUI("connecting", "Connecting...");
+  updateSyncUI("connecting", "Connecting...", dbUrl);
 
   try {
-    if (!firebase.apps.length) {
-      firebase.initializeApp({ databaseURL: dbUrl });
+    if (firebase.apps.length) {
+      await firebase.app().delete();
     }
+    firebase.initializeApp({ databaseURL: dbUrl });
     firebaseDb = firebase.database();
 
-    // Listen for live updates across all devices
-    firebaseDb.ref("marks").on("value", (snapshot) => {
+    // Test permission by reading marks once
+    firebaseDb.ref("marks").once("value").then((snapshot) => {
       const cloudData = snapshot.val() || {};
       MARKS = cloudData;
       saveLocalMarks(MARKS);
       updateMetrics();
       refreshVisibleCards();
-      const mf = document.getElementById("marker-filter");
-      if (mf && mf.value !== "all") {
-        render(false);
-      }
-      updateSyncUI("online", "Live Cloud Sync");
-    }, (error) => {
-      console.warn("Cloud sync error:", error);
-      const msg = (error && (error.message || error.code || "")) + "";
-      if (msg.toLowerCase().includes("permission_denied") || msg.includes("PERMISSION_DENIED")) {
-        updateSyncUI("permission_denied", "Rules Locked (Click to fix)");
-      } else {
-        updateSyncUI("offline", "Sync Error (Click to check)");
-      }
-    });
+      updateSyncUI("online", "Live Cloud Sync", dbUrl);
 
-    // Merge any offline local markings to cloud on initial connect
-    firebaseDb.ref("marks").once("value").then((snapshot) => {
-      const cloudData = snapshot.val() || {};
+      // Merge local offline marks
       const localData = loadLocalMarks();
       let hasLocalDiff = false;
       const merged = Object.assign({}, cloudData);
@@ -1661,17 +1725,44 @@ function initCloudSync() {
         firebaseDb.ref("marks").update(merged);
       }
     }).catch(err => {
-      console.warn("Initial sync check:", err);
-      const msg = (err && (err.message || err.code || "")) + "";
-      if (msg.toLowerCase().includes("permission_denied") || msg.includes("PERMISSION_DENIED")) {
-        updateSyncUI("permission_denied", "Rules Locked (Click to fix)");
+      handleSyncError(err, dbUrl);
+    });
+
+    // Listen for live updates across all devices
+    firebaseDb.ref("marks").on("value", (snapshot) => {
+      const cloudData = snapshot.val() || {};
+      MARKS = cloudData;
+      saveLocalMarks(MARKS);
+      updateMetrics();
+      refreshVisibleCards();
+      const mf = document.getElementById("marker-filter");
+      if (mf && mf.value !== "all") {
+        render(false);
       }
+      updateSyncUI("online", "Live Cloud Sync", dbUrl);
+    }, (error) => {
+      handleSyncError(error, dbUrl);
     });
 
   } catch (err) {
     console.error("Firebase init failed:", err);
-    updateSyncUI("offline", "Sync Offline");
+    updateSyncUI("offline", "Sync Offline", dbUrl);
   }
+}
+
+function handleSyncError(error, dbUrl) {
+  console.warn("Cloud sync error:", error);
+  const msg = (error && (error.message || error.code || "")) + "";
+  if (msg.toLowerCase().includes("permission_denied") || msg.includes("PERMISSION_DENIED")) {
+    updateSyncUI("permission_denied", "Rules Locked (Click to fix)", dbUrl);
+  } else {
+    updateSyncUI("offline", "Sync Error (Click to check)", dbUrl);
+  }
+}
+
+function initCloudSync() {
+  const dbUrl = getFirebaseUrl();
+  connectCloudSync(dbUrl);
 }
 
 // Cloud Sync Modal Handlers
@@ -1701,7 +1792,7 @@ if (syncModal) {
 }
 
 if (saveSyncBtn) {
-  saveSyncBtn.addEventListener("click", () => {
+  saveSyncBtn.addEventListener("click", async () => {
     let url = firebaseUrlInput.value.trim();
     
     // Auto-detect accidental paste of Firebase Console browser URL
@@ -1711,8 +1802,9 @@ if (saveSyncBtn) {
         const rawName = m[1];
         const dbName = rawName.includes("default-rtdb") ? rawName : rawName + "-default-rtdb";
         const suggested = "https://" + dbName + ".firebaseio.com";
-        if (confirm("You pasted the Firebase Console management URL instead of the Database endpoint.\n\nWould you like to automatically use your Database URL:\n" + suggested + " ?")) {
+        if (confirm("You entered the Firebase Console management URL instead of the Database endpoint.\n\nWould you like to automatically use your Database URL:\n" + suggested + " ?")) {
           url = suggested;
+          firebaseUrlInput.value = url;
         } else {
           return;
         }
@@ -1728,9 +1820,8 @@ if (saveSyncBtn) {
     }
     
     localStorage.setItem("pkm_cloud_db_url", url);
-    syncModal.style.display = "none";
-    alert("🎉 Cloud Database connected!\n\nAll voter markings will now synchronize in real-time across all devices.");
-    location.reload();
+    // Dynamically connect without reloading the page!
+    await connectCloudSync(url);
   });
 }
 
