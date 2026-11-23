@@ -1088,7 +1088,8 @@ footer.app-footer {
       <span class="te">పాతకుంకం గ్రామ పంచాయతీ సర్వే</span>
     </div>
     
-    <div class="pin-display">
+    <div class="pin-display" id="pin-display-wrap" title="Tap to enter PIN">
+      <input type="tel" id="pin-hidden-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" autocomplete="one-time-code" style="position:absolute;opacity:0;pointer-events:auto;width:100%;height:60px;top:0;left:0;cursor:pointer;z-index:2;">
       <div class="pin-cell" id="dot-0"></div>
       <div class="pin-cell" id="dot-1"></div>
       <div class="pin-cell" id="dot-2"></div>
@@ -1304,15 +1305,87 @@ footer.app-footer {
 
 <script>
 // ========================================================
-// 1. SECRET SALT & HASH (PIN IS NEVER PLAIN IN COMMIT/CODE)
+// 1. PURE JS SHA-256 HASH & SECRET AUTHENTICATION
+// Works in ALL environments (file://, http://, https://, webview, mobile)
 // ========================================================
 const AUTH_HASH = "3ca7484c045ed4e8ff7fef5b9ce6b63781ee1cba4742779a42968d576d8f9eb8";
 const AUTH_SALT = "pkm_survey_2026_";
+
+function calcSha256(ascii) {
+  function rightRotate(value, amount) {
+    return (value >>> amount) | (value << (32 - amount));
+  }
+  var mathPow = Math.pow;
+  var maxWord = mathPow(2, 32);
+  var lengthProperty = "length";
+  var i, j;
+  var result = "";
+  var words = [];
+  var asciiBitLength = ascii[lengthProperty] * 8;
+  var hash = calcSha256.h = calcSha256.h || [];
+  var k = calcSha256.k = calcSha256.k || [];
+  var primeCounter = k[lengthProperty];
+  var isComposite = {};
+  for (var candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i = 0; i < 313; i += candidate) {
+        isComposite[i] = candidate;
+      }
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  ascii += "\x80";
+  while ((ascii[lengthProperty] % 64) - 56) ascii += "\x00";
+  for (i = 0; i < ascii[lengthProperty]; i++) {
+    j = ascii.charCodeAt(i);
+    if (j >> 8) return "";
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words[lengthProperty]] = (asciiBitLength / maxWord) | 0;
+  words[words[lengthProperty]] = asciiBitLength;
+  for (j = 0; j < words[lengthProperty];) {
+    var w = words.slice(j, j += 16);
+    var oldHash = hash.slice(0);
+    hash = hash.slice(0, 8);
+    for (i = 0; i < 64; i++) {
+      var i2 = i + j;
+      var w15 = w[i - 15], w2 = w[i - 2];
+      var a = hash[0], e = hash[4];
+      var temp1 = hash[7]
+        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+        + ((e & hash[5]) ^ ((~e) & hash[6]))
+        + k[i]
+        + (w[i] = (i < 16) ? w[i] : (
+            w[i - 16]
+            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+            + w[i - 7]
+            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+          ) | 0
+        );
+      var temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      hash = [(temp1 + temp2) | 0].concat(hash);
+      hash[4] = (hash[4] + temp1) | 0;
+    }
+    for (i = 0; i < 8; i++) {
+      hash[i] = (hash[i] + oldHash[i]) | 0;
+    }
+  }
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j + 1; j--) {
+      var b = (hash[i] >> (j * 8)) & 255;
+      result += ((b < 16) ? "0" : "") + b.toString(16);
+    }
+  }
+  return result;
+}
 
 let enteredPin = "";
 const pinOverlay = document.getElementById("pin-overlay");
 const pinBox = document.getElementById("pin-box");
 const pinStatus = document.getElementById("pin-status");
+const hiddenInput = document.getElementById("pin-hidden-input");
 const cells = [
   document.getElementById("dot-0"),
   document.getElementById("dot-1"),
@@ -1322,9 +1395,14 @@ const cells = [
 
 function updateCells() {
   for (let i = 0; i < 4; i++) {
-    cells[i].classList.toggle("filled", i < enteredPin.length);
-    cells[i].classList.remove("error");
-    cells[i].textContent = i < enteredPin.length ? "●" : "";
+    if (cells[i]) {
+      cells[i].classList.toggle("filled", i < enteredPin.length);
+      cells[i].classList.remove("error");
+      cells[i].textContent = i < enteredPin.length ? "●" : "";
+    }
+  }
+  if (hiddenInput && hiddenInput.value !== enteredPin) {
+    hiddenInput.value = enteredPin;
   }
 }
 
@@ -1354,52 +1432,57 @@ function handleClear() {
   updateCells();
 }
 
-async function verifySecretCode() {
-  try {
-    const enc = new TextEncoder().encode(AUTH_SALT + enteredPin);
-    const hashBuf = await crypto.subtle.digest("SHA-256", enc);
-    const hashHex = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
-    
-    if (hashHex === AUTH_HASH) {
-      pinStatus.textContent = "✓ Authorized! Loading portal...";
-      pinStatus.className = "pin-info";
-      pinStatus.style.color = "var(--sure-color)";
-      cells.forEach(c => { c.style.borderColor = "var(--sure-color)"; c.style.color = "var(--sure-color)"; });
+function verifySecretCode() {
+  const hashHex = calcSha256(AUTH_SALT + enteredPin);
+  
+  if (hashHex === AUTH_HASH) {
+    pinStatus.textContent = "✓ Authorized! Loading portal...";
+    pinStatus.className = "pin-info";
+    pinStatus.style.color = "var(--sure-color)";
+    cells.forEach(c => { 
+      if (c) {
+        c.style.borderColor = "var(--sure-color)"; 
+        c.style.color = "var(--sure-color)"; 
+      }
+    });
+    setTimeout(() => {
+      pinOverlay.style.opacity = "0";
+      pinOverlay.style.transition = "opacity 0.22s ease-out";
       setTimeout(() => {
-        pinOverlay.style.opacity = "0";
-        pinOverlay.style.transition = "opacity 0.22s ease-out";
-        setTimeout(() => {
-          pinOverlay.style.display = "none";
-          document.getElementById("q").focus();
-        }, 220);
-      }, 120);
-    } else {
-      pinBox.classList.add("shake");
-      cells.forEach(c => c.classList.add("error"));
-      pinStatus.textContent = "✕ Unauthorized PIN. Access denied.";
-      pinStatus.className = "pin-info error";
-      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      setTimeout(() => {
-        pinBox.classList.remove("shake");
-        enteredPin = "";
-        updateCells();
-      }, 550);
-    }
-  } catch (err) {
-    console.error("Crypto error:", err);
+        pinOverlay.style.display = "none";
+        const qEl = document.getElementById("q");
+        if (qEl) qEl.focus();
+      }, 220);
+    }, 120);
+  } else {
+    pinBox.classList.add("shake");
+    cells.forEach(c => { if (c) c.classList.add("error"); });
+    pinStatus.textContent = "✕ Unauthorized PIN. Access denied.";
+    pinStatus.className = "pin-info error";
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    setTimeout(() => {
+      pinBox.classList.remove("shake");
+      enteredPin = "";
+      updateCells();
+    }, 550);
   }
 }
 
+// Keyboard input for desktop
 window.addEventListener("keydown", (e) => {
-  if (pinOverlay.style.display === "none") return;
-  if (document.getElementById("sync-modal").style.display === "flex") return;
+  if (pinOverlay && pinOverlay.style.display === "none") return;
+  const syncM = document.getElementById("sync-modal");
+  if (syncM && syncM.style.display === "flex") return;
+  
   if (e.key >= "0" && e.key <= "9") handleDigit(e.key);
   else if (e.key === "Backspace") handleBack();
   else if (e.key === "Escape") handleClear();
 });
 
+// Keypad buttons for touch and click
 document.querySelectorAll(".keypad button").forEach(btn => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
     const val = btn.dataset.val;
     const action = btn.dataset.action;
     if (val !== undefined) handleDigit(val);
@@ -1408,10 +1491,27 @@ document.querySelectorAll(".keypad button").forEach(btn => {
   });
 });
 
+// Mobile hidden input listener
+if (hiddenInput) {
+  hiddenInput.addEventListener("input", (e) => {
+    const val = hiddenInput.value.replace(/[^0-9]/g, "").slice(0, 4);
+    enteredPin = val;
+    updateCells();
+    if (enteredPin.length === 4) {
+      setTimeout(verifySecretCode, 60);
+    }
+  });
+}
+
+// Auto focus hidden input on overlay click
+const pinDisplayWrap = document.getElementById("pin-display-wrap");
+if (pinDisplayWrap && hiddenInput) {
+  pinDisplayWrap.addEventListener("click", () => hiddenInput.focus());
+}
+
 // ========================================================
 // 2. LIVE CLOUD REALTIME DATABASE SYNC ENGINE
 // ========================================================
-// Default project DB URL (can be customized here or in UI modal)
 const HARDCODED_FIREBASE_URL = ""; 
 
 function getFirebaseUrl() {
@@ -1521,7 +1621,8 @@ function initCloudSync() {
       saveLocalMarks(MARKS);
       updateMetrics();
       refreshVisibleCards();
-      if (document.getElementById("marker-filter").value !== "all") {
+      const mf = document.getElementById("marker-filter");
+      if (mf && mf.value !== "all") {
         render(false);
       }
     }, (error) => {
@@ -1555,27 +1656,29 @@ if (openSyncBtn) openSyncBtn.addEventListener("click", showSyncModal);
 if (syncStatusEl) syncStatusEl.addEventListener("click", showSyncModal);
 if (closeSyncBtn) closeSyncBtn.addEventListener("click", () => syncModal.style.display = "none");
 if (closeSyncX) closeSyncX.addEventListener("click", () => syncModal.style.display = "none");
-syncModal.addEventListener("click", (e) => {
-  if (e.target === syncModal) syncModal.style.display = "none";
-});
+if (syncModal) {
+  syncModal.addEventListener("click", (e) => {
+    if (e.target === syncModal) syncModal.style.display = "none";
+  });
+}
 
-saveSyncBtn.addEventListener("click", () => {
-  let url = firebaseUrlInput.value.trim();
-  if (url && !url.startsWith("http")) url = "https://" + url;
-  if (url.endsWith("/")) url = url.slice(0, -1);
-  
-  if (!url) {
-    alert("Please enter a valid Firebase Realtime Database URL.");
-    return;
-  }
-  
-  localStorage.setItem("pkm_cloud_db_url", url);
-  syncModal.style.display = "none";
-  alert("🎉 Cloud Database connected!
-
-All voter markings will now synchronize in real-time across all devices.");
-  location.reload();
-});
+if (saveSyncBtn) {
+  saveSyncBtn.addEventListener("click", () => {
+    let url = firebaseUrlInput.value.trim();
+    if (url && !url.startsWith("http")) url = "https://" + url;
+    if (url.endsWith("/")) url = url.slice(0, -1);
+    
+    if (!url) {
+      alert("Please enter a valid Firebase Realtime Database URL.");
+      return;
+    }
+    
+    localStorage.setItem("pkm_cloud_db_url", url);
+    syncModal.style.display = "none";
+    alert("🎉 Cloud Database connected!\n\nAll voter markings will now synchronize in real-time across all devices.");
+    location.reload();
+  });
+}
 
 if (disconnectBtn) {
   disconnectBtn.addEventListener("click", () => {
@@ -1595,15 +1698,14 @@ if (copyShareLinkBtn) {
     }
     const shareUrl = window.location.origin + window.location.pathname + "?db=" + encodeURIComponent(dbUrl);
     navigator.clipboard.writeText(shareUrl).then(() => {
-      alert("✅ WhatsApp Link copied to clipboard!
-
-Send this link to your party workers on WhatsApp. When they open it, their phones will automatically connect to this synced database!");
+      alert("✅ WhatsApp Link copied to clipboard!\n\nSend this link to your party workers on WhatsApp. When they open it, their phones will automatically connect to this synced database!");
     }).catch(() => {
       prompt("Copy this link to share on WhatsApp:", shareUrl);
     });
   });
 }
 
+// ========================================================
 // 3. VOTER MARKINGS PERSISTENCE
 // ========================================================
 const MARKS_KEY = "pkm_voter_cadre_marks";
@@ -1631,10 +1733,14 @@ function updateMetrics() {
     else if (MARKS[s] === "doubt") doubt++;
   }
   const empty = V.length - sure - doubt;
-  document.getElementById("metric-total").textContent = V.length.toLocaleString("en-IN");
-  document.getElementById("metric-sure").textContent = sure.toLocaleString("en-IN");
-  document.getElementById("metric-doubt").textContent = doubt.toLocaleString("en-IN");
-  document.getElementById("metric-empty").textContent = empty.toLocaleString("en-IN");
+  const mt = document.getElementById("metric-total");
+  const ms = document.getElementById("metric-sure");
+  const md = document.getElementById("metric-doubt");
+  const me = document.getElementById("metric-empty");
+  if (mt) mt.textContent = V.length.toLocaleString("en-IN");
+  if (ms) ms.textContent = sure.toLocaleString("en-IN");
+  if (md) md.textContent = doubt.toLocaleString("en-IN");
+  if (me) me.textContent = empty.toLocaleString("en-IN");
 }
 
 function refreshVisibleCards() {
@@ -1667,55 +1773,55 @@ function setVoterMark(serial, mark) {
   saveLocalMarks(MARKS);
   updateMetrics();
   refreshVisibleCards();
-  if (document.getElementById('marker-filter').value !== 'all') { render(false); }
+  const mf = document.getElementById("marker-filter");
+  if (mf && mf.value !== "all") {
+    render(false);
+  }
 }
 
 // Export / Import
-document.getElementById("export-btn").addEventListener("click", () => {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(MARKS, null, 2));
-  const dlAnchor = document.createElement("a");
-  dlAnchor.setAttribute("href", dataStr);
-  dlAnchor.setAttribute("download", `pkm_survey_backup_${new Date().toISOString().slice(0,10)}.json`);
-  dlAnchor.click();
-});
-
-const importInput = document.getElementById("import-file-input");
-document.getElementById("import-btn").addEventListener("click", () => importInput.click());
-importInput.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    try {
-      const imported = JSON.parse(event.target.result);
-      if (typeof imported === "object" && imported !== null) {
-        MARKS = Object.assign({}, MARKS, imported);
-        saveLocalMarks(MARKS);
-        if (firebaseDb) {
-          firebaseDb.ref("marks").update(imported);
-        }
-        updateMetrics();
-        render(true);
-        alert("Survey data successfully imported and synced to the cloud!");
-      }
-    } catch (err) {
-      alert("Invalid JSON survey file.");
-    }
-  };
-  reader.readAsText(file);
-});
-
-// Metric cards click to filter
-document.querySelectorAll(".metric-card").forEach(c => {
-  c.addEventListener("click", () => {
-    const filterVal = c.dataset.filter;
-    document.getElementById("marker-filter").value = filterVal;
-    render(true);
+const exportBtn = document.getElementById("export-btn");
+if (exportBtn) {
+  exportBtn.addEventListener("click", () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(MARKS, null, 2));
+    const dl = document.createElement("a");
+    dl.setAttribute("href", dataStr);
+    dl.setAttribute("download", "pathakunkam_voter_survey_" + new Date().toISOString().slice(0, 10) + ".json");
+    dl.click();
   });
-});
+}
+
+const importBtn = document.getElementById("import-btn");
+const importInput = document.getElementById("import-file-input");
+if (importBtn && importInput) {
+  importBtn.addEventListener("click", () => importInput.click());
+  importInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target.result);
+        if (typeof imported === "object" && imported !== null) {
+          MARKS = Object.assign({}, MARKS, imported);
+          saveLocalMarks(MARKS);
+          if (firebaseDb) {
+            firebaseDb.ref("marks").update(imported);
+          }
+          updateMetrics();
+          render(true);
+          alert("Survey data successfully imported and synced to the cloud!");
+        }
+      } catch (err) {
+        alert("Invalid JSON survey file.");
+      }
+    };
+    reader.readAsText(file);
+  });
+}
 
 // ========================================================
-// 4. VOTER DATA ENGINE & FILTERS
+// 4. DATA PROCESSING & SEARCH ENGINE
 // ========================================================
 const COLS = ["ward","serial","part_ref","name","name_te","rel_type","rel_name","rel_name_te","age","gender","house","epic","page","review"];
 const RAW = JSON.parse(document.getElementById("voters").textContent);
@@ -1730,66 +1836,111 @@ function pk(s) {
 function words(s) {
   const w = pk(s).split(/\s+/).filter(Boolean);
   const out = w.slice();
-  for (let i = 0; i + 1 < w.length; i++) out.push(w[i] + w[i + 1]);
+  for (let i = 0; i < w.length; i++) {
+    for (let j = i + 1; j < w.length; j++) {
+      out.push(w[i] + w[j]);
+    }
+  }
   return out;
 }
 
+const TELUGU_RE = /[\u0c00-\u0c7f]/;
+
 V.forEach(v => {
-  v._nw = words(v.name);
-  v._rw = words(v.rel_name);
-  v._te = ((v.name_te || "") + " " + (v.rel_name_te || "")).replace(/\s+/g, "");
-  v._id = (v.epic || "").toLowerCase();
-  v._h = (v.house || "").toLowerCase().replace(/\s+/g, "");
+  v._wn = words(v.name);
+  v._wr = words(v.rel_name);
+  v._allW = v._wn.concat(v._wr);
+  v._te = ((v.name_te || "") + " " + (v.rel_name_te || "")).toLowerCase();
+  v._epic = (v.epic || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  v._h = (v.house || "").trim().toLowerCase();
 });
 
-const $ = id => document.getElementById(id);
-let ward = "", house = null, shown = 60;
-const REL_MAP = { Father: "Father", Husband: "Husband", Mother: "Mother", Other: "Relation" };
+const REL_MAP = {
+  Father: "తండ్రి (Father)", Husband: "భర్త (Husband)",
+  Mother: "తల్లి (Mother)", Other: "ఇతర (Other)"
+};
 
-function wardsUI() {
-  const counts = {};
-  V.forEach(v => counts[v.ward] = (counts[v.ward] || 0) + 1);
-  const ws = Object.keys(counts).map(Number).sort((a, b) => a - b);
-  const mk = (w, label, n) => `<button class="ward-btn" data-w="${w}" aria-pressed="${String(w) === ward}"><b>${label}</b><span class="count-tag">${n.toLocaleString("en-IN")}</span></button>`;
-  $("wards").innerHTML = mk("", "All Wards", V.length) + ws.map(w => mk(w, "Ward " + w, counts[w])).join("");
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
 }
 
-function esc(s) { return String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+const $ = id => document.getElementById(id);
+
+let ward = null, house = null, shown = 60;
+
+function wardsUI() {
+  document.querySelectorAll(".ward-btn").forEach(b => {
+    b.classList.toggle("active", (ward === null && b.dataset.w === "all") || (ward !== null && b.dataset.w === String(ward)));
+  });
+}
 
 function filter() {
-  const q = $("q").value.trim();
-  const g = $("gender").value, ag = $("age").value;
-  const mf = $("marker-filter").value;
-  const [a0, a1] = ag ? ag.split("-").map(Number) : [0, 999];
-  const toks = q.split(/\s+/).filter(Boolean);
-  const isTe = /[\u0C00-\u0C7F]/.test(q);
+  const qRaw = $("q").value.trim();
+  const isTe = TELUGU_RE.test(qRaw);
+  const qTe = qRaw.toLowerCase();
+  const toks = isTe ? [] : pk(qRaw).split(/\s+/).filter(Boolean);
+  const qEpic = qRaw.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-  let out = V.filter(v => {
-    if (ward && String(v.ward) !== ward) return false;
-    if (house && (v.ward + "|" + v._h) !== house.key) return false;
-    if (g && v.gender !== g) return false;
-    if (ag && !(v.age >= a0 && v.age <= a1)) return false;
-    
-    // Status Filter
-    const mark = MARKS[v.serial] || "empty";
-    if (mf === "sure" && mark !== "sure") return false;
-    if (mf === "doubt" && mark !== "doubt") return false;
-    if (mf === "empty" && mark !== "empty") return false;
-    if (mf === "marked" && mark === "empty") return false;
-
-    if (!toks.length) return true;
-    if (isTe) return toks.every(t => v._te.includes(t));
-    return toks.every(t => {
-      const tl = t.toLowerCase();
-      if (/\d/.test(tl)) return v._id.includes(tl) || v._h.includes(tl) || String(v.serial) === tl;
-      const k = pk(tl);
-      return v._nw.some(w => w.startsWith(k)) || v._rw.some(w => w.startsWith(k)) || v._id.includes(tl);
-    });
-  });
-
-  if (toks.length && !isTe) out.forEach(v => v._own = toks.every(t => /\d/.test(t) || v._nw.some(w => w.startsWith(pk(t)))) ? 0 : 1);
+  const g = $("gender").value;
+  const a = $("age").value;
   const s = $("sort").value;
-  if (s === "name") out.sort((a, b) => a.name.localeCompare(b.name));
+  const mf = $("marker-filter").value;
+
+  const out = [];
+
+  for (let i = 0; i < V.length; i++) {
+    const v = V[i];
+    if (ward !== null && v.ward !== Number(ward)) continue;
+    if (house && (v.ward + "|" + v._h) !== house.key) continue;
+    if (g && v.gender !== g) continue;
+
+    if (a) {
+      const age = v.age;
+      if (age === null || age === undefined) continue;
+      if (a === "18-25" && (age < 18 || age > 25)) continue;
+      if (a === "26-40" && (age < 26 || age > 40)) continue;
+      if (a === "41-60" && (age < 41 || age > 60)) continue;
+      if (a === "61+" && age < 61) continue;
+    }
+
+    if (mf !== "all") {
+      const curMark = MARKS[v.serial] || "empty";
+      if (mf === "sure" && curMark !== "sure") continue;
+      if (mf === "doubt" && curMark !== "doubt") continue;
+      if (mf === "empty" && curMark !== "empty") continue;
+      if (mf === "marked" && curMark === "empty") continue;
+    }
+
+    if (qRaw) {
+      if (qEpic.length >= 3 && v._epic.includes(qEpic)) {
+        v._own = 1; out.push(v); continue;
+      }
+      if (isTe) {
+        if (!v._te.includes(qTe)) continue;
+        v._own = 0; out.push(v); continue;
+      }
+      let match = true;
+      let ownNameScore = 0;
+      for (let t = 0; t < toks.length; t++) {
+        const tok = toks[t];
+        const inOwn = v._wn.some(w => w.includes(tok));
+        const inAny = inOwn || v._allW.some(w => w.includes(tok));
+        if (!inAny) { match = false; break; }
+        if (inOwn) ownNameScore++;
+      }
+      if (!match) continue;
+      v._own = -ownNameScore;
+      out.push(v);
+    } else {
+      v._own = 0;
+      out.push(v);
+    }
+  }
+
+  if (s === "serial") out.sort((a, b) => a.serial - b.serial);
+  else if (s === "name") out.sort((a, b) => a.name.localeCompare(b.name));
   else if (s === "age") out.sort((a, b) => (a.age || 0) - (b.age || 0));
   else if (s === "house") out.sort((a, b) => a.ward - b.ward || a.house.localeCompare(b.house, undefined, { numeric: true }));
   else out.sort((a, b) => (toks.length && !isTe ? a._own - b._own : 0) || a.ward - b.ward || a.serial - b.serial);
