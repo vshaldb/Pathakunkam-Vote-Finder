@@ -369,9 +369,7 @@ body::before {
 header.app-header {
   background: var(--surface);
   border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: env(safe-area-inset-top, 0px);
-  z-index: 50;
+  position: relative;
   box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
 
@@ -973,34 +971,54 @@ footer.app-footer strong {
 }
 
 /* Modal Overlay & Card System */
+
+/* =========================================================
+   FLUID MODAL SYSTEM (Touch-scrolling, Auto-sizing, Mobile-first)
+   ========================================================= */
 .modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 100000;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 16px 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   backdrop-filter: blur(4px);
+  box-sizing: border-box;
 }
 
 .modal-card {
   width: 100%;
   max-width: 440px;
+  box-sizing: border-box;
+  margin: auto;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 22px;
+  padding: 22px 18px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   display: grid;
-  gap: 14px;
+  gap: 12px;
   text-align: left;
+}
+
+.modal-card h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .modal-field {
   display: grid;
-  gap: 6px;
+  gap: 5px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-field label {
@@ -1010,9 +1028,12 @@ footer.app-footer strong {
 }
 
 .modal-field input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
   font: inherit;
-  font-size: 0.88rem;
-  padding: 8px 12px;
+  font-size: 0.95rem;
+  padding: 9px 12px;
   border: 1.5px solid var(--line);
   border-radius: 8px;
   background: var(--bg);
@@ -1025,37 +1046,51 @@ footer.app-footer strong {
   border-color: var(--primary);
 }
 
+.pin-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .modal-btns {
   display: flex;
   gap: 10px;
   margin-top: 6px;
+  flex-wrap: wrap;
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  padding: 9px 16px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  cursor: pointer;
+.modal-btns button {
+  flex: 1;
+  min-width: 120px;
 }
 
-.btn-primary:hover {
-  background: var(--primary-hover);
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px 8px;
+    align-items: flex-start;
+  }
+  .modal-card {
+    padding: 18px 14px;
+    border-radius: 14px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    max-width: 100%;
+  }
+  .pin-inputs-grid {
+    grid-template-columns: 1fr; /* Stacks vertically on small screens */
+    gap: 10px;
+  }
+  .modal-btns {
+    flex-direction: column-reverse;
+  }
+  .modal-btns button {
+    width: 100%;
+  }
 }
 
-.btn-secondary {
-  background: var(--bg);
-  color: var(--fg);
-  border: 1px solid var(--line);
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
+
 
 </style>
 </head>
@@ -1130,14 +1165,14 @@ footer.app-footer strong {
       <input type="password" id="admin-password-input" placeholder="Enter admin password" autocomplete="current-password">
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div class="pin-inputs-grid">
       <div class="modal-field">
         <label for="new-pin-input">New 4-Digit PIN</label>
-        <input type="password" id="new-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:4px;font-weight:700;font-size:1.1rem;">
+        <input type="password" id="new-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:3px;font-weight:700;font-size:1.1rem;">
       </div>
       <div class="modal-field">
         <label for="confirm-pin-input">Confirm PIN</label>
-        <input type="password" id="confirm-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:4px;font-weight:700;font-size:1.1rem;">
+        <input type="password" id="confirm-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:3px;font-weight:700;font-size:1.1rem;">
       </div>
     </div>
 
@@ -1201,7 +1236,6 @@ footer.app-footer strong {
         <option value="house">Sort: House No.</option>
         <option value="age">Sort: Age</option>
       </select>
-      <label class="ctrl-toggle"><input type="checkbox" id="review"> Check list only</label>
       <button class="ctrl-btn" id="header-admin-pin-btn" title="Admin: Update PIN" style="padding:6px 12px;border-radius:8px;font-size:0.8rem;cursor:pointer;background:var(--bg);border:1px solid var(--line);color:var(--fg);font-weight:600;">⚙️ Change PIN</button>
       <button class="ctrl-btn" id="header-lock-btn" title="Lock Portal" style="padding:6px 10px;border-radius:8px;font-size:0.8rem;cursor:pointer;background:var(--bg);border:1px solid var(--line);color:var(--fg);font-weight:600;">🔒 Lock</button>
     </div>
@@ -1738,7 +1772,7 @@ function filter() {
   const g = $("gender").value;
   const a = $("age").value;
   const s = $("sort").value;
-  const rev = $("review").checked;
+  
 
   const out = [];
 
@@ -1747,7 +1781,7 @@ function filter() {
     if (ward !== null && v.ward !== Number(ward)) continue;
     if (house && (v.ward + "|" + v._h) !== house.key) continue;
     if (g && v.gender !== g) continue;
-    if (rev && (!v.review || !v.review.length)) continue;
+    
 
     if (a) {
       const age = v.age;
@@ -1843,7 +1877,7 @@ function render(reset) {
 let t;
 $("q").addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => render(true), 120); });
 $("clearq").addEventListener("click", () => { $("q").value = ""; $("clearq").style.display = "none"; $("q").focus(); render(true); });
-["gender", "age", "sort", "review"].forEach(id => $(id).addEventListener("change", () => render(true)));
+["gender", "age", "sort"].forEach(id => $(id).addEventListener("change", () => render(true)));
 $("wards").addEventListener("click", e => {
   const b = e.target.closest(".ward-btn"); if (!b) return;
   ward = b.dataset.w; house = null; wardsUI(); render(true);

@@ -327,9 +327,7 @@ body::before {
 header.app-header {
   background: var(--surface);
   border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: env(safe-area-inset-top, 0px);
-  z-index: 50;
+  position: relative;
   box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
 
@@ -562,28 +560,37 @@ select.ctrl-select, .ctrl-btn {
 }
 
 /* Cloud DB Modal */
+
+/* =========================================================
+   FLUID MODAL SYSTEM (Touch-scrolling, Auto-sizing, Mobile-first)
+   ========================================================= */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 20000;
-  background: rgba(0, 0, 0, 0.55);
+  z-index: 100000;
+  background: rgba(0, 0, 0, 0.65);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
+  padding: 16px 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   backdrop-filter: blur(4px);
+  box-sizing: border-box;
 }
 
 .modal-card {
   width: 100%;
   max-width: 440px;
+  box-sizing: border-box;
+  margin: auto;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 22px;
-  box-shadow: var(--shadow-lg);
+  padding: 22px 18px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   display: grid;
-  gap: 14px;
+  gap: 12px;
   text-align: left;
 }
 
@@ -598,7 +605,9 @@ select.ctrl-select, .ctrl-btn {
 
 .modal-field {
   display: grid;
-  gap: 6px;
+  gap: 5px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-field label {
@@ -608,18 +617,66 @@ select.ctrl-select, .ctrl-btn {
 }
 
 .modal-field input {
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
   font: inherit;
-  font-size: 0.88rem;
-  padding: 8px 12px;
+  font-size: 0.95rem;
+  padding: 9px 12px;
   border: 1.5px solid var(--line);
   border-radius: 8px;
   background: var(--bg);
   color: var(--fg);
+  outline: none;
+  transition: border-color 0.15s ease;
 }
 
 .modal-field input:focus {
-  outline: none;
   border-color: var(--primary);
+}
+
+.pin-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-btns {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.modal-btns button {
+  flex: 1;
+  min-width: 120px;
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px 8px;
+    align-items: flex-start;
+  }
+  .modal-card {
+    padding: 18px 14px;
+    border-radius: 14px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    max-width: 100%;
+  }
+  .pin-inputs-grid {
+    grid-template-columns: 1fr; /* Stacks vertically on small screens */
+    gap: 10px;
+  }
+  .modal-btns {
+    flex-direction: column-reverse;
+  }
+  .modal-btns button {
+    width: 100%;
+  }
 }
 
 .modal-guide {
@@ -1142,14 +1199,14 @@ footer.app-footer {
       <input type="password" id="admin-password-input" placeholder="Enter admin password" autocomplete="current-password">
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+    <div class="pin-inputs-grid">
       <div class="modal-field">
         <label for="new-pin-input">New 4-Digit PIN</label>
-        <input type="password" id="new-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:4px;font-weight:700;font-size:1.1rem;">
+        <input type="password" id="new-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:3px;font-weight:700;font-size:1.1rem;">
       </div>
       <div class="modal-field">
         <label for="confirm-pin-input">Confirm PIN</label>
-        <input type="password" id="confirm-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:4px;font-weight:700;font-size:1.1rem;">
+        <input type="password" id="confirm-pin-input" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="e.g. 5678" style="text-align:center;letter-spacing:3px;font-weight:700;font-size:1.1rem;">
       </div>
     </div>
 
